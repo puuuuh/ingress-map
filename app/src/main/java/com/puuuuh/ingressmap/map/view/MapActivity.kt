@@ -42,7 +42,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
                 }
             }
             val viewport = mMap.projection.visibleRegion.latLngBounds
-            val portalsEnabled = mMap.cameraPosition.zoom > 12
+            val portalsEnabled = mMap.cameraPosition.zoom > 15
             for (p in portals) {
                 p.value.isVisible = portalsEnabled && viewport.contains(p.value.position)
             }
@@ -79,10 +79,13 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
         (map as SupportMapFragment).getMapAsync(this)
         val autocomplete =
             supportFragmentManager.findFragmentById(R.id.autocomplete) as AutocompleteSupportFragment
-        autocomplete.setPlaceFields(listOf(Place.Field.LAT_LNG, Place.Field.NAME))
+        autocomplete.setPlaceFields(listOf(Place.Field.LAT_LNG))
         autocomplete.setOnPlaceSelectedListener(object : PlaceSelectionListener {
             override fun onPlaceSelected(place: Place) {
-                mMap.animateCamera(CameraUpdateFactory.newLatLng(place.latLng))
+                mMap.animateCamera(CameraUpdateFactory
+                    .zoomTo(13f))
+                mMap.animateCamera(CameraUpdateFactory
+                    .newLatLng(place.latLng))
             }
             override fun onError(status: Status) {}
         })
