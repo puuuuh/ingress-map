@@ -16,16 +16,10 @@ import com.google.android.libraries.places.widget.listener.PlaceSelectionListene
 import com.google.common.geometry.*
 import kotlinx.android.synthetic.main.activity_map.*
 
-interface TaskListener {
-    fun onFinished(result: HashMap<S2CellId, Polyline>)
-}
-
-class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCameraIdleListener,
-    TaskListener {
+class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCameraIdleListener {
     private lateinit var mMap: GoogleMap
-    private var updateTask: RedrawTask? = null
-    private lateinit var lines: HashMap<S2CellId, Polyline>
-    private lateinit var portals: HashMap<String, Marker>
+    private var lines = hashMapOf<S2CellId, Polyline>()
+    private val portals = hashMapOf<String, Marker>()
     private lateinit var mapViewModel: MapViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -48,9 +42,38 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
                 }
             }
             val viewport = mMap.projection.visibleRegion.latLngBounds
+            val portalsEnabled = mMap.cameraPosition.zoom > 12
             for (p in portals) {
-                p.value.isVisible = viewport.contains(p.value.position)
+                p.value.isVisible = portalsEnabled && viewport.contains(p.value.position)
             }
+        })
+        mapViewModel.cellLines.observe(this, androidx.lifecycle.Observer { data ->
+            val newLines = hashMapOf<S2CellId, Polyline>()
+            data.map {
+                var line = lines[it.key]
+                if (line == null) {
+                    when (it.key.level()) {
+                        14 -> {
+                            it.value
+                                .color(Color.rgb(239, 70, 15))
+                                .width(8f)
+                                .zIndex(2f)
+                        }
+                        17 -> {
+                            it.value
+                                .color(Color.rgb(8, 152, 152))
+                                .width(4f)
+                        }
+                    }
+                    line = mMap.addPolyline(it.value)
+                }
+                newLines[it.key] = line!!
+                lines.remove(it.key)
+            }
+            lines.map {
+                it.value.remove()
+            }
+            lines = newLines
         })
 
         (map as SupportMapFragment).getMapAsync(this)
@@ -67,8 +90,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
 
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
-        lines = HashMap()
-        portals = HashMap()
         mMap.setMaxZoomPreference(21f)
         mMap.setMinZoomPreference(3f)
         mMap.setOnCameraIdleListener(this)
@@ -77,130 +98,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
     }
 
     override fun onCameraIdle() {
-        updateTask?.cancel(true)
-        updateTask = RedrawTask(
-            mMap,
-            this
-        )
-        updateTask!!.execute(
-            TaskArg(
-                mMap.cameraPosition,
-                mMap.projection.visibleRegion,
-                lines
-            )
-        )
-
         mapViewModel.updateRegion(mMap.projection.visibleRegion.latLngBounds, mMap.cameraPosition.zoom.toInt())
-    }
-
-    override fun onFinished(result: HashMap<S2CellId, Polyline>) {
-        lines = result
-        val portalsEnabled = mMap.cameraPosition.zoom > 12
+        val portalsEnabled = mMap.cameraPosition.zoom > 15
         val viewport = mMap.projection.visibleRegion.latLngBounds
         for (p in portals) {
             p.value.isVisible = portalsEnabled && viewport.contains(p.value.position)
-        }
-    }
-
-    class TaskArg(val pos: CameraPosition, val viewport: VisibleRegion, var lines: HashMap<S2CellId, Polyline>) {}
-
-    class TaskRes {
-        var new14 = HashMap<S2CellId, PolylineOptions>()
-        var new17 = HashMap<S2CellId, PolylineOptions>()
-        var lines = HashMap<S2CellId, Polyline>()
-        var rm = HashMap<S2CellId, Polyline>()
-    }
-
-    class RedrawTask(map: GoogleMap, onResult: TaskListener) :
-        AsyncTask<TaskArg, Any?, TaskRes>() {
-
-
-        override fun doInBackground(params: Array<TaskArg>): TaskRes {
-            val arg = params[0]
-            val lines = arg.lines
-            val r = TaskRes()
-            r.lines = lines.clone() as HashMap<S2CellId, Polyline>
-
-            val bounds = arg.viewport.latLngBounds
-            val northeast = S2LatLng.fromDegrees(bounds.northeast.latitude, bounds.northeast.longitude)
-            val southwest = S2LatLng.fromDegrees(bounds.southwest.latitude, bounds.southwest.longitude)
-            val rect = S2LatLngRect.fromPointPair(northeast, southwest)
-
-            val cells14 = ArrayList<S2CellId>()
-            val cells17 = ArrayList<S2CellId>()
-
-            if (arg.pos.zoom > 12)
-                S2RegionCoverer.getSimpleCovering(rect, rect.center.toPoint(), 14, cells14)
-            if (arg.pos.zoom >= 14.9)
-                S2RegionCoverer.getSimpleCovering(rect, rect.center.toPoint(), 17, cells17)
-
-            val newLines = HashMap<S2CellId, Polyline>()
-            for (cellId in cells17) {
-                if (lines.contains(cellId)) {
-                    newLines[cellId] = lines[cellId]!!
-                    lines.remove(cellId)
-                    continue
-                }
-                val line = PolylineOptions()
-                val c = S2Cell(cellId)
-                for (i in 0..2) {
-                    val p = S2LatLng(c.getVertex(i))
-                    line.add(LatLng(p.lat().degrees(), p.lng().degrees()))
-                }
-                r.new17[cellId] = line
-            }
-
-            for (cellId in cells14) {
-                if (lines.contains(cellId)) {
-                    newLines[cellId] = lines[cellId]!!
-                    lines.remove(cellId)
-                    continue
-                }
-                val line = PolylineOptions()
-                val c = S2Cell(cellId)
-                for (i in 0..2) {
-                    val p = S2LatLng(c.getVertex(i))
-                    line.add(LatLng(p.lat().degrees(), p.lng().degrees()))
-                }
-                r.new14[cellId] = line
-            }
-
-
-            r.rm = lines
-            return r
-        }
-
-        override fun onPostExecute(result: TaskRes) {
-            for (i in result.rm) {
-                result.lines.remove(i.key)
-                i.value.remove()
-            }
-            for (i in result.new14) {
-                val l = i.value
-                    .color(Color.rgb(239, 70, 15))
-                    .width(8f)
-                    .zIndex(2f)
-                result.lines[i.key] = mMap.addPolyline(l)
-            }
-            for (i in result.new17) {
-                val l = i.value
-                    .color(Color.rgb(8, 152, 152))
-                    .width(4f)
-                result.lines[i.key] = mMap.addPolyline(l)
-            }
-            taskListener.onFinished(result.lines)
-        }
-
-
-
-        companion object {
-            private lateinit var mMap: GoogleMap;
-            private lateinit var taskListener: TaskListener
-        }
-
-        init {
-            mMap = map
-            taskListener = onResult
         }
     }
 }

@@ -2,6 +2,7 @@ package com.puuuuh.ingressmap.map.model
 
 import com.puuuuh.ingressmap.map.viewmodel.UserData
 import com.google.android.gms.maps.model.LatLngBounds
+import com.google.android.gms.maps.model.VisibleRegion
 import com.google.gson.Gson
 import okhttp3.*
 import java.io.IOException
@@ -47,8 +48,6 @@ data class Entity (val guid: String, val raw: ArrayList<Any>) {
     }
 }
 
-
-
 class MapModel {
     var okHttpClient: OkHttpClient = OkHttpClient()
 
@@ -62,7 +61,7 @@ class MapModel {
         return Pair(x, y)
     }
 
-    fun tryLoad(userData: UserData, tiles: List<String>, callback: OnDataReadyCallback, retry: Int = 0) {
+    fun tryLoadData(userData: UserData, tiles: List<String>, callback: OnDataReadyCallback, retry: Int = 0) {
         if (retry > 1) {
             return
         }
@@ -79,7 +78,7 @@ class MapModel {
             .build()
         okHttpClient.newCall(r).enqueue(object: Callback {
             override fun onFailure(call: Call?, e: IOException?) {
-                tryLoad(userData, tiles, callback, retry+1)
+                tryLoadData(userData, tiles, callback, retry+1)
             }
 
             override fun onResponse(call: Call?, response: Response?) {
@@ -102,7 +101,7 @@ class MapModel {
                     }
                 }
                 if (next.isNotEmpty()) {
-                    tryLoad(userData, next, callback, retry+1)
+                    tryLoadData(userData, next, callback, retry+1)
                 }
 
                 callback.onDataReady(data)
@@ -115,18 +114,18 @@ class MapModel {
         val level = if(zoom >= zoomToLevel.size) { 0 } else { zoomToLevel[zoom] }
         val ne = getXYTile(region.northeast.latitude, region.northeast.longitude, zoom)
         val sw = getXYTile(region.southwest.latitude, region.southwest.longitude, zoom)
-        var tiles = mutableListOf<String>()
+        val tiles = mutableListOf<String>()
         for (y in ne.second..sw.second) {
             for (x in sw.first..ne.first) {
                 tiles.add("${zoom}_${x}_${y}_${level}_8_100")
-                if (tiles.size == 29) {
-                    tryLoad(userData, tiles, callback)
-                    tiles = mutableListOf()
-                }
             }
         }
-        if (tiles.isNotEmpty()) {
-            tryLoad(userData, tiles, callback)
-        }
+        tiles.withIndex()
+            .groupBy { it.index / 30 }
+            .map { tryLoadData(userData, tiles, callback) }
+    }
+
+    fun updateCells(zoom: Int, bounds: LatLngBounds, callback: OnCellsReadyCallback) {
+        CalcCells(callback).execute(TaskArg(zoom, bounds))
     }
 }
