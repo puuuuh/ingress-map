@@ -5,7 +5,9 @@ import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.view.View.INVISIBLE
 import android.webkit.CookieManager
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.EditText
@@ -30,6 +32,16 @@ class LoginActivity : AppCompatActivity() {
         setContentView(R.layout.activity_login)
 
         login_webview.webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(
+                view: WebView?,
+                request: WebResourceRequest?
+            ): Boolean {
+                if (request?.url.toString().startsWith("https://intel.ingress.com/intel?state=GOOGLE&code=")) {
+                    view?.visibility = INVISIBLE
+                }
+                return super.shouldOverrideUrlLoading(view, request)
+            }
+
             override fun onPageFinished(view: WebView, url: String) {
                 if (url.startsWith("https://intel.ingress.com/intel?state=GOOGLE&code=")) {
                     val cookieManager: CookieManager = CookieManager.getInstance()
