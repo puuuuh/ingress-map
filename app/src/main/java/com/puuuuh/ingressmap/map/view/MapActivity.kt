@@ -1,5 +1,6 @@
 package com.puuuuh.ingressmap.map.view
 
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import android.view.Menu
@@ -16,9 +17,13 @@ import com.google.android.libraries.places.widget.AutocompleteSupportFragment
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener
 import com.google.common.geometry.S2CellId
 import com.puuuuh.ingressmap.R
+import com.puuuuh.ingressmap.login.LoginActivity
 import com.puuuuh.ingressmap.map.viewmodel.MapViewModel
 import com.puuuuh.ingressmap.map.viewmodel.UserData
+import com.puuuuh.ingressmap.settings.Settings
 import kotlinx.android.synthetic.main.activity_map.*
+
+private const val LOGIN_RC = 0
 
 class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCameraIdleListener {
     private lateinit var mMap: GoogleMap
@@ -33,8 +38,14 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
         setContentView(R.layout.activity_map)
         setSupportActionBar(toolbar)
 
-        val user = UserData(token=intent.getStringExtra("token"), csrfToken=intent.getStringExtra("csrfToken"))
+        val user = UserData(token=Settings.token, csrfToken=Settings.csrfToken)
         mapViewModel = MapViewModel(user)
+        mapViewModel.user.observe(this, androidx.lifecycle.Observer {
+           // if (it.csrfToken.isEmpty() || it.token.isEmpty()) {
+                val intent = Intent(this, LoginActivity::class.java)
+                startActivityForResult(intent, LOGIN_RC)
+           // }
+        })
         mapViewModel.portals.observe(this, androidx.lifecycle.Observer {
             val newPortals = mutableMapOf<String, Marker>()
             for (i in it) {
@@ -136,7 +147,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
             lines = newLines
         })
 
-        (map as SupportMapFragment).getMapAsync(this)
+      //  (map as SupportMapFragment).getMapAsync(this)
         val autocomplete =
             supportFragmentManager.findFragmentById(R.id.autocomplete) as AutocompleteSupportFragment
         autocomplete.setPlaceFields(listOf(Place.Field.LAT_LNG))
@@ -150,6 +161,10 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
             }
             override fun onError(status: Status) {}
         })
+
+        mapViewModel.setFieldsVisible(Settings.showFields)
+        mapViewModel.setLinksVisible(Settings.showLinks)
+        mapViewModel.setPortalsVisible(Settings.showPortals)
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -158,20 +173,30 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
         return true
     }
 
-    override fun onOptionsItemSelected(item: MenuItem?): Boolean {
-        when (item?.itemId) {
+    override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
+        menu?.findItem(R.id.showLinks)?.isChecked = Settings.showLinks
+        menu?.findItem(R.id.showFields)?.isChecked = Settings.showFields
+        menu?.findItem(R.id.showPortals)?.isChecked = Settings.showPortals
+        return super.onPrepareOptionsMenu(menu)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
             R.id.showPortals -> {
                 item.isChecked = !item.isChecked
+                Settings.showPortals = item.isChecked
                 mapViewModel.setPortalsVisible(item.isChecked)
                 return true
             }
             R.id.showFields -> {
                 item.isChecked = !item.isChecked
+                Settings.showFields = item.isChecked
                 mapViewModel.setFieldsVisible(item.isChecked)
                 return true
             }
             R.id.showLinks -> {
                 item.isChecked = !item.isChecked
+                Settings.showLinks = item.isChecked
                 mapViewModel.setLinksVisible(item.isChecked)
                 return true
             }
@@ -183,13 +208,30 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
         mMap = googleMap
         mMap.setMaxZoomPreference(21f)
         mMap.setMinZoomPreference(3f)
+        var zoom = Settings.lastZoom
+        if (zoom < 3) {
+            zoom = 3f
+        }
+        if (zoom > 21f) {
+            Settings.lastZoom = 21f
+        }
+       // mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(Settings.lastPosition, zoom))
         mMap.setOnCameraIdleListener(this)
         mMap.isMyLocationEnabled = true
         mMap.mapType = GoogleMap.MAP_TYPE_HYBRID
     }
 
     override fun onCameraIdle() {
+        Settings.lastPosition = mMap.cameraPosition.target
+        Settings.lastZoom = mMap.cameraPosition.zoom
         mapViewModel.updateRegion(mMap.projection.visibleRegion.latLngBounds, mMap.cameraPosition.zoom.toInt())
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (requestCode == LOGIN_RC) {
+            mapViewModel.setUser(UserData(data?.getStringExtra("token") ?: "", data?.getStringExtra("csrftoken") ?: ""))
+        }
+        super.onActivityResult(requestCode, resultCode, data)
     }
 }
 

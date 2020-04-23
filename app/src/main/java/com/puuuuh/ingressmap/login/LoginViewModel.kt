@@ -1,4 +1,4 @@
-package com.puuuuh.ingressmap.ui.login
+package com.puuuuh.ingressmap.login
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
