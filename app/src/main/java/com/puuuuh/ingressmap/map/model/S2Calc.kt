@@ -1,7 +1,9 @@
 package com.puuuuh.ingressmap.map.model
 
 import android.os.AsyncTask
-import com.google.android.gms.maps.model.*
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
+import com.google.android.gms.maps.model.PolylineOptions
 import com.google.common.geometry.*
 
 interface OnCellsReadyCallback {

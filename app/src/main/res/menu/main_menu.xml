@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:checkableBehavior="all"
+        android:id="@+id/action_settings"
+        app:showAsAction="ifRoom"
+        android:title=""
+        android:icon="@drawable/ic_menu">
+        <menu>
+            <item
+                android:id="@+id/showFields"
+                android:title="Fields"
+                android:checkable="true">
+            </item>
+            <item
+                android:id="@+id/showLinks"
+                android:title="Links"
+                android:checkable="true">
+            </item>
+            <item
+                android:id="@+id/showPortals"
+                android:title="Portals"
+                android:checkable="true">
+            </item>
+        </menu>
+    </item>
+
+</menu>

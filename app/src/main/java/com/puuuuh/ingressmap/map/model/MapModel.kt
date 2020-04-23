@@ -1,8 +1,8 @@
 package com.puuuuh.ingressmap.map.model
 
+import com.google.android.gms.maps.model.LatLng
 import com.puuuuh.ingressmap.map.viewmodel.UserData
 import com.google.android.gms.maps.model.LatLngBounds
-import com.google.android.gms.maps.model.VisibleRegion
 import com.google.gson.Gson
 import okhttp3.*
 import java.io.IOException
@@ -10,11 +10,13 @@ import java.net.URL
 import kotlin.math.*
 
 interface OnDataReadyCallback {
-    fun onDataReady(data: List<Entity>)
+    fun onCellDataReceived(cellId: String, portal: Map<String, Entity>,
+                           links: Map<String, Link>,
+                           fields: Map<String, Field>)
 }
 
 data class GetEntitiesPayload(val tileKeys: List<String>) {
-    val v = "f0d1685cfbbd243ac6688645056a6ed2c642cea5"
+    val v = "e84906a74ad12f19e8c0f930b566de42a5ec44f9"
 }
 
 data class GetEntitiesResponse (
@@ -29,7 +31,7 @@ data class GetEntitiesResponse (
     }
 }
 
-data class Entity (val guid: String, val raw: ArrayList<Any>) {
+data class Entity (val raw: ArrayList<Any>) {
     var lat = 0f.toDouble()
     var lng = 0f.toDouble()
     var pic = ""
@@ -45,6 +47,52 @@ data class Entity (val guid: String, val raw: ArrayList<Any>) {
             ""
         }
         name = raw[8] as String
+    }
+}
+
+data class Link(val raw: ArrayList<Any>) {
+    data class Point(val guid: String, val LatLng: LatLng)
+
+    var team = ""
+    var points = arrayOf<Point>()
+
+    init {
+        team = raw[1] as String
+        points = arrayOf(
+            Point(raw[2] as String, LatLng(
+                raw[3] as Double / 1000000,
+                raw[4] as Double / 1000000
+            )),
+            Point(raw[5] as String, LatLng(
+                raw[6] as Double / 1000000,
+                raw[7] as Double / 1000000
+            ))
+        )
+    }
+}
+
+data class Field(val raw: ArrayList<Any>) {
+    data class Point(val guid: String, val LatLng: LatLng)
+
+    var team = ""
+    var points = arrayOf<Point>()
+
+    init {
+        team = raw[1] as String
+        val pointsRaw = raw[2] as ArrayList<ArrayList<Any>>
+        points = arrayOf(
+            Point(pointsRaw[0][0] as String, LatLng(
+                pointsRaw[0][1] as Double / 1000000,
+                pointsRaw[0][2] as Double / 1000000
+            )),
+            Point(pointsRaw[1][0] as String, LatLng(
+                pointsRaw[1][1] as Double / 1000000,
+                pointsRaw[1][2] as Double / 1000000
+            )),Point(pointsRaw[2][0] as String, LatLng(
+                pointsRaw[2][1] as Double / 1000000,
+                pointsRaw[2][2] as Double / 1000000
+            ))
+        )
     }
 }
 
@@ -84,7 +132,6 @@ class MapModel {
             override fun onResponse(call: Call?, response: Response?) {
                 if (response!!.code() != 200)
                     return
-                val data = mutableListOf<Entity>()
                 val next = mutableListOf<String>()
                 val json = response.body()?.string()
                 val res = g.fromJson(json, GetEntitiesResponse::class.java)
@@ -93,18 +140,28 @@ class MapModel {
                         next.add(es.key)
                         continue
                     }
+                    val portals = mutableMapOf<String, Entity>()
+                    val links = mutableMapOf<String, Link>()
+                    val fields = mutableMapOf<String, Field>()
                     for (e in es.value.gameEntities!!) {
                         val entityData = e[2] as ArrayList<Any>
-                        if ((entityData[0] as String) == "p") {
-                            data.add(Entity(e[0] as String, entityData))
+                        when (entityData[0] as String) {
+                            "p" -> {
+                                portals[e[0] as String] = Entity(entityData)
+                            }
+                            "e" -> {
+                                links[e[0] as String] = Link(entityData)
+                            }
+                            "r" -> {
+                                fields[e[0] as String] = Field(entityData)
+                            }
                         }
                     }
+                    callback.onCellDataReceived(es.key, portals, links, fields)
                 }
                 if (next.isNotEmpty()) {
                     tryLoadData(userData, next, callback, retry+1)
                 }
-
-                callback.onDataReady(data)
             }
         })
     }
