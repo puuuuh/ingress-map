@@ -15,7 +15,7 @@ data class CellData(val portals: Map<String, Entity>, val links: Map<String, Lin
 
 class MapViewModel(userData: UserData) : ViewModel(), OnDataReadyCallback, OnCellsReadyCallback {
     private val _user = MutableLiveData<UserData>()
-    private val user: LiveData<UserData> = _user
+    val user: LiveData<UserData> = _user
     private val model: MapModel = MapModel()
 
     // All cached entities
@@ -105,6 +105,16 @@ class MapViewModel(userData: UserData) : ViewModel(), OnDataReadyCallback, OnCel
             showLinks = value
             updateVisibleLinks()
         }
+    }
+
+    fun setUser(user: UserData) {
+        _user.postValue(user)
+    }
+
+    override fun onAuthNeeded() {
+        _user.postValue(
+            UserData("", "")
+        )
     }
 
     override fun onCellDataReceived(

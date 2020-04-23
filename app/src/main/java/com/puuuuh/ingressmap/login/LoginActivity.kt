@@ -1,4 +1,4 @@
-package com.puuuuh.ingressmap.ui.login
+package com.puuuuh.ingressmap.login
 
 import android.annotation.SuppressLint
 import android.content.Intent

@@ -1,4 +1,4 @@
-package com.puuuuh.ingressmap.ui.login
+package com.puuuuh.ingressmap.login
 
 /**
  * Authentication result : success (user details) or error message.

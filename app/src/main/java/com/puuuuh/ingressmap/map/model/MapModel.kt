@@ -13,6 +13,7 @@ interface OnDataReadyCallback {
     fun onCellDataReceived(cellId: String, portal: Map<String, Entity>,
                            links: Map<String, Link>,
                            fields: Map<String, Field>)
+    fun onAuthNeeded()
 }
 
 data class GetEntitiesPayload(val tileKeys: List<String>) {
@@ -88,7 +89,8 @@ data class Field(val raw: ArrayList<Any>) {
             Point(pointsRaw[1][0] as String, LatLng(
                 pointsRaw[1][1] as Double / 1000000,
                 pointsRaw[1][2] as Double / 1000000
-            )),Point(pointsRaw[2][0] as String, LatLng(
+            )),
+            Point(pointsRaw[2][0] as String, LatLng(
                 pointsRaw[2][1] as Double / 1000000,
                 pointsRaw[2][2] as Double / 1000000
             ))
@@ -132,6 +134,9 @@ class MapModel {
             override fun onResponse(call: Call?, response: Response?) {
                 if (response!!.code() != 200)
                     return
+                if (response.code() == 403){
+                    return callback.onAuthNeeded()
+                }
                 val next = mutableListOf<String>()
                 val json = response.body()?.string()
                 val res = g.fromJson(json, GetEntitiesResponse::class.java)
