@@ -92,16 +92,33 @@ class MapViewModel(userData: UserData) : ViewModel(), OnDataReadyCallback, OnCel
             return true
         }
 
-        if (this.northeast.latitude < viewport.northeast.latitude &&
-            this.southwest.latitude > viewport.southwest.latitude) {
-            return this.southwest.longitude < viewport.southwest.longitude &&
-                    this.northeast.longitude > viewport.northeast.longitude
+        val vpLeft = viewport.southwest.longitude
+        val myLeft = this.southwest.longitude
+        var vpRight = viewport.northeast.longitude
+        var myRight = this.northeast.longitude
+
+        val vpUp = viewport.northeast.latitude
+        val myUp = this.northeast.latitude
+        val vpDown = viewport.southwest.latitude
+        val myDown = this.southwest.latitude
+
+        if (myRight < myLeft) {
+            myRight += 360
+        }
+        if (vpRight < vpLeft) {
+            vpRight += 360
         }
 
-        if (this.southwest.longitude > viewport.southwest.longitude &&
-            this.northeast.longitude < viewport.northeast.longitude) {
-            return this.northeast.latitude > viewport.northeast.latitude &&
-                    this.southwest.latitude < viewport.southwest.latitude
+        if (myUp < vpUp &&
+            myDown > vpDown) {
+            return myLeft < vpLeft &&
+                    myRight > vpRight
+        }
+
+        if (myLeft > vpLeft &&
+            myRight < vpRight) {
+            return myUp > vpUp &&
+                    myDown < vpDown
         }
 
         return false
