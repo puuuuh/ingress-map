@@ -80,7 +80,7 @@ class MapViewModel(userData: UserData) : ViewModel(), OnDataReadyCallback, OnCel
 
     private fun updateVisiblePortals() {
         _portals.postValue(
-            if (!showPortal || zoom < 14.9) {
+            if (!showPortal || zoom < 13.5) {
                 mapOf()
             } else {
                 allPortals.filter { viewport.contains(LatLng(it.value.lat, it.value.lng)) }

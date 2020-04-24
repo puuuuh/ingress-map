@@ -3,6 +3,7 @@ package com.puuuuh.ingressmap.map.view
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
+import android.os.Handler
 import android.view.Menu
 import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
@@ -22,6 +23,7 @@ import com.puuuuh.ingressmap.map.viewmodel.MapViewModel
 import com.puuuuh.ingressmap.map.viewmodel.UserData
 import com.puuuuh.ingressmap.settings.Settings
 import kotlinx.android.synthetic.main.activity_map.*
+import java.util.*
 
 private const val LOGIN_RC = 0
 
@@ -41,33 +43,44 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
         val user = UserData(token=Settings.token, csrfToken=Settings.csrfToken)
         mapViewModel = MapViewModel(user)
         mapViewModel.user.observe(this, androidx.lifecycle.Observer {
-           // if (it.csrfToken.isEmpty() || it.token.isEmpty()) {
+            if (it.csrfToken.isEmpty() || it.token.isEmpty()) {
                 val intent = Intent(this, LoginActivity::class.java)
                 startActivityForResult(intent, LOGIN_RC)
-           // }
+            }
         })
         mapViewModel.portals.observe(this, androidx.lifecycle.Observer {
             val newPortals = mutableMapOf<String, Marker>()
             for (i in it) {
                 val old = portals.remove(i.key)
-                if (old == null) {
-                    val resource = if (i.value.team == "E") {
+                val iconRes = when (i.value.team) {
+                    "E" -> {
                         R.drawable.ic_green_portal
-                    } else if (i.value.team == "R") {
+                    }
+                    "R" -> {
                         R.drawable.ic_blue_portal
-                    } else {
+                    }
+                    else -> {
                         R.drawable.ic_white_portal
                     }
-                    val point = LatLng(i.value.lat, i.value.lng)
+                }
+                val pos = LatLng(i.value.lat, i.value.lng)
+                if (old == null) {
                     val m = MarkerOptions()
-                        .position(point)
+                        .position(pos)
                         .title(i.value.name)
-                        .icon(BitmapDescriptorFactory.fromResource(resource))
+                        .icon(BitmapDescriptorFactory.fromResource(iconRes))
                         .anchor(0.5f, 0.5f)
                     newPortals[i.key] = mMap.addMarker(m)
                 } else {
+                    if (old.position != pos) {
+                        old.position = pos
+                    }
+                    if (old.tag != iconRes) {
+                        old.setIcon(BitmapDescriptorFactory.fromResource(iconRes))
+                    }
                     newPortals[i.key] = old
                 }
+                newPortals[i.key]!!.tag = iconRes
             }
             for (l in portals) {
                 l.value.remove()
@@ -78,8 +91,9 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
             val newLinks = mutableMapOf<String, Polyline>()
             for (i in data) {
                 val old = links.remove(i.key)
+                val color = if (i.value.team == "E") {Color.GREEN} else {Color.BLUE}
+
                 if (old == null) {
-                    val color = if (i.value.team == "E") {Color.GREEN} else {Color.BLUE}
                     val m = PolylineOptions()
                         .add(i.value.points[0].LatLng, i.value.points[1].LatLng)
                         .width(2f)
@@ -87,10 +101,20 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
 
                     newLinks[i.key] = mMap.addPolyline(m)
                 } else {
+                    if (old.color != color) {
+                        old.color = color
+                    }
+                    if (old.points[0] != i.value.points[0].LatLng) {
+                        old.points[0] = i.value.points[0].LatLng
+                    }
+                    if (old.points[1] != i.value.points[1].LatLng) {
+                        old.points[1] = i.value.points[1].LatLng
+                    }
                     newLinks[i.key] = old
                 }
             }
             for (l in links) {
+
                 l.value.remove()
             }
             links = newLinks
@@ -147,7 +171,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
             lines = newLines
         })
 
-      //  (map as SupportMapFragment).getMapAsync(this)
+        (map as SupportMapFragment).getMapAsync(this)
         val autocomplete =
             supportFragmentManager.findFragmentById(R.id.autocomplete) as AutocompleteSupportFragment
         autocomplete.setPlaceFields(listOf(Place.Field.LAT_LNG))
@@ -165,6 +189,12 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
         mapViewModel.setFieldsVisible(Settings.showFields)
         mapViewModel.setLinksVisible(Settings.showLinks)
         mapViewModel.setPortalsVisible(Settings.showPortals)
+
+        Timer().schedule(object : TimerTask() {
+            override fun run() {
+
+            }
+        }, 3000, 3000)
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -215,7 +245,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
         if (zoom > 21f) {
             Settings.lastZoom = 21f
         }
-       // mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(Settings.lastPosition, zoom))
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(Settings.lastPosition, zoom))
         mMap.setOnCameraIdleListener(this)
         mMap.isMyLocationEnabled = true
         mMap.mapType = GoogleMap.MAP_TYPE_HYBRID
@@ -229,7 +259,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (requestCode == LOGIN_RC) {
-            mapViewModel.setUser(UserData(data?.getStringExtra("token") ?: "", data?.getStringExtra("csrftoken") ?: ""))
+            val token = data?.getStringExtra("token") ?: ""
+            val csrf = data?.getStringExtra("csrftoken") ?: ""
+            Settings.token = token
+            Settings.csrfToken = csrf
+            mapViewModel.setUser(UserData(token, csrf))
         }
         super.onActivityResult(requestCode, resultCode, data)
     }
