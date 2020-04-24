@@ -79,14 +79,32 @@ class MapViewModel(userData: UserData) : ViewModel(), OnDataReadyCallback, OnCel
     }
 
     private fun LatLngBounds.intersects(viewport: LatLngBounds): Boolean {
-        val thisNorthWest = LatLng(viewport.northeast.latitude, viewport.southwest.longitude)
-        val thisSouthEast = LatLng(viewport.southwest.latitude, viewport.northeast.longitude)
-        val vpNorthWest = LatLng(this.northeast.latitude, this.southwest.longitude)
-        val vpSouthEast = LatLng(this.southwest.latitude, this.northeast.longitude)
-        return viewport.contains(this.northeast) || viewport.contains(this.southwest) ||
+        val thisNorthWest = LatLng(this.northeast.latitude, this.southwest.longitude)
+        val thisSouthEast = LatLng(this.southwest.latitude, this.northeast.longitude)
+        val vpNorthWest = LatLng(viewport.northeast.latitude, viewport.southwest.longitude)
+        val vpSouthEast = LatLng(viewport.southwest.latitude, viewport.northeast.longitude)
+
+
+        if (viewport.contains(this.northeast) || viewport.contains(this.southwest) ||
                 viewport.contains(thisNorthWest) || viewport.contains(thisSouthEast) ||
                 this.contains(viewport.northeast) || this.contains(viewport.southwest) ||
-                this.contains(vpNorthWest) || this.contains(vpSouthEast)
+                this.contains(vpNorthWest) || this.contains(vpSouthEast)) {
+            return true
+        }
+
+        if (this.northeast.latitude < viewport.northeast.latitude &&
+            this.southwest.latitude > viewport.southwest.latitude) {
+            return this.southwest.longitude < viewport.southwest.longitude &&
+                    this.northeast.longitude > viewport.northeast.longitude
+        }
+
+        if (this.southwest.longitude > viewport.southwest.longitude &&
+            this.northeast.longitude < viewport.northeast.longitude) {
+            return this.northeast.latitude > viewport.northeast.latitude &&
+                    this.southwest.latitude < viewport.southwest.latitude
+        }
+
+        return false
     }
 
     private fun updateVisiblePortals() {
