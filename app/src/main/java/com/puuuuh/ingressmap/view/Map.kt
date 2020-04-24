@@ -1,12 +1,11 @@
-package com.puuuuh.ingressmap.map.view
+package com.puuuuh.ingressmap.view
 
-import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
-import android.os.Handler
 import android.view.Menu
 import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.ViewModelProvider
 import com.google.android.gms.common.api.Status
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -18,16 +17,16 @@ import com.google.android.libraries.places.widget.AutocompleteSupportFragment
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener
 import com.google.common.geometry.S2CellId
 import com.puuuuh.ingressmap.R
-import com.puuuuh.ingressmap.login.LoginActivity
-import com.puuuuh.ingressmap.map.viewmodel.MapViewModel
-import com.puuuuh.ingressmap.map.viewmodel.UserData
+import com.puuuuh.ingressmap.viewmodel.MapViewModel
+import com.puuuuh.ingressmap.repository.Portal
 import com.puuuuh.ingressmap.settings.Settings
+import com.puuuuh.ingressmap.viewmodel.ViewmodelFactory
 import kotlinx.android.synthetic.main.activity_map.*
 import java.util.*
 
 private const val LOGIN_RC = 0
 
-class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCameraIdleListener {
+class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCameraIdleListener, GoogleMap.OnMarkerClickListener {
     private lateinit var mMap: GoogleMap
     private var lines = hashMapOf<S2CellId, Polyline>()
     private var portals = mutableMapOf<String, Marker>()
@@ -40,14 +39,10 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
         setContentView(R.layout.activity_map)
         setSupportActionBar(toolbar)
 
-        val user = UserData(token=Settings.token, csrfToken=Settings.csrfToken)
-        mapViewModel = MapViewModel(user)
-        mapViewModel.user.observe(this, androidx.lifecycle.Observer {
-            if (it.csrfToken.isEmpty() || it.token.isEmpty()) {
-                val intent = Intent(this, LoginActivity::class.java)
-                startActivityForResult(intent, LOGIN_RC)
-            }
-        })
+        mapViewModel = ViewModelProvider(this,
+            ViewmodelFactory(application)
+        ).get(MapViewModel::class.java)
+
         mapViewModel.portals.observe(this, androidx.lifecycle.Observer {
             val newPortals = mutableMapOf<String, Marker>()
             for (i in it) {
@@ -75,12 +70,12 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
                     if (old.position != pos) {
                         old.position = pos
                     }
-                    if (old.tag as String != i.value.team) {
+                    if ((old.tag as Portal).team != i.value.team) {
                         old.setIcon(BitmapDescriptorFactory.fromResource(iconRes))
                     }
                     newPortals[i.key] = old
                 }
-                newPortals[i.key]!!.tag = i.value.team
+                newPortals[i.key]!!.tag = i.value
             }
             for (l in portals) {
                 l.value.remove()
@@ -237,6 +232,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
         mMap.setMaxZoomPreference(21f)
+        mMap.setOnMarkerClickListener(this)
         mMap.setMinZoomPreference(3f)
         var zoom = Settings.lastZoom
         if (zoom < 3) {
@@ -257,15 +253,14 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
         mapViewModel.updateRegion(mMap.projection.visibleRegion.latLngBounds, mMap.cameraPosition.zoom.toInt())
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        if (requestCode == LOGIN_RC) {
-            val token = data?.getStringExtra("token") ?: ""
-            val csrf = data?.getStringExtra("csrftoken") ?: ""
-            Settings.token = token
-            Settings.csrfToken = csrf
-            mapViewModel.setUser(UserData(token, csrf))
+    override fun onMarkerClick(p0: Marker?): Boolean {
+        if (p0?.tag is Portal) {
+            val fm = supportFragmentManager
+            val dlg = PortalInfo.newInstance(p0.tag as Portal)
+            dlg.show(fm, "fragment_alert")
         }
-        super.onActivityResult(requestCode, resultCode, data)
+
+        return true
     }
 }
 

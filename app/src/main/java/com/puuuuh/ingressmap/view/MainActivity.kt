@@ -1,4 +1,4 @@
-package com.puuuuh.ingressmap
+package com.puuuuh.ingressmap.view
 
 import android.Manifest
 import android.content.Intent
@@ -6,8 +6,8 @@ import android.content.pm.PackageManager
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import androidx.core.app.ActivityCompat
-import com.puuuuh.ingressmap.map.view.MapActivity
 import com.google.android.libraries.places.api.Places
+import com.puuuuh.ingressmap.R
 import com.puuuuh.ingressmap.settings.Settings
 
 class MainActivity : AppCompatActivity() {

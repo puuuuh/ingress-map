@@ -9,7 +9,8 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingBottom="@dimen/activity_vertical_margin"
-    tools:context=".login.LoginActivity">
+    tools:context=".view.LoginActivity"
+    android:launchMode="singleTop">
 
     <ProgressBar
         android:id="@+id/progressBar"

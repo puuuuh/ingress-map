@@ -1,7 +1,6 @@
-package com.puuuuh.ingressmap.login
+package com.puuuuh.ingressmap.view
 
 import android.annotation.SuppressLint
-import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -14,20 +13,15 @@ import android.widget.EditText
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import com.puuuuh.ingressmap.R
+import com.puuuuh.ingressmap.settings.Settings
 import kotlinx.android.synthetic.main.activity_login.*
 
 
 class LoginActivity : AppCompatActivity() {
 
-    private lateinit var loginViewModel: LoginViewModel
-
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        loginViewModel = ViewModelProvider(this, LoginViewModelFactory())
-            .get(LoginViewModel::class.java)
-
 
         setContentView(R.layout.activity_login)
 
@@ -64,7 +58,9 @@ class LoginActivity : AppCompatActivity() {
                                 }
                             }
                         }
-                        loginViewModel.login(token, csrfToken)
+                        Settings.token = token
+                        Settings.csrfToken = csrfToken
+                        finish()
                     }
                 }
 
@@ -73,15 +69,6 @@ class LoginActivity : AppCompatActivity() {
         }
         login_webview.settings.userAgentString = "Mozilla/5.0 (Linux; Android 7.0; SM-G930V Build/NRD90M) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.125 Mobile Safari/537.36"
         login_webview.settings.javaScriptEnabled = true
-
-
-        loginViewModel.loginResult.observe(this, androidx.lifecycle.Observer {
-            val data = Intent()
-                .putExtra("token", it.success!!.token)
-                .putExtra("csrftoken", it.success.csrfToken)
-            setResult(0, data)
-            finish()
-        })
 
 
         login_webview.loadUrl("https://accounts.google.com/o/oauth2/v2/auth?client_id=369030586920-h43qso8aj64ft2h5ruqsqlaia9g9huvn.apps.googleusercontent.com&redirect_uri=https://intel.ingress.com/intel&prompt=consent%20select_account&state=GOOGLE&scope=email%20profile&response_type=code")

@@ -1,5 +1,6 @@
-package com.puuuuh.ingressmap.map.viewmodel
+package com.puuuuh.ingressmap.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -7,19 +8,27 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.common.geometry.S2CellId
-import com.puuuuh.ingressmap.map.model.*
+import com.puuuuh.ingressmap.repository.*
+import kotlin.math.*
 
-data class CellData(val portals: Map<String, Entity>, val links: Map<String, Link>, val fields: Map<String, Field>) {
+data class CellData(val portals: Map<String, Portal>, val links: Map<String, Link>, val fields: Map<String, Field>)
 
+private fun getXYTile(lat : Double, lng: Double, zoom : Int) : Pair<Int, Int> {
+    val tileCounts = arrayOf(1,1,1,40,40,80,80,320,1000,2000,2000,4000,8000,16000,16000,32000)
+    val latRad = Math.toRadians(lat)
+
+    val cnt = if (zoom >= tileCounts.size) {tileCounts[tileCounts.size - 1]} else {tileCounts[zoom]}
+    val x = (((lng + 180.0) / 360.0) * cnt).toInt()
+    val y = ((1.0 - log(tan(latRad) + (1 / cos(latRad)), E) / PI) / 2.0 * cnt).toInt()
+    return Pair(x, y)
 }
 
-class MapViewModel(userData: UserData) : ViewModel(), OnDataReadyCallback, OnCellsReadyCallback {
-    private val _user = MutableLiveData<UserData>()
-    val user: LiveData<UserData> = _user
-    private val model: MapModel = MapModel()
+class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnCellsReadyCallback {
+    private val ingressRepo = IngressApiRepo(context)
+    private val cellsRepo = S2CellsRepo()
 
     // All cached entities
-    private val allPortals = mutableMapOf<String, Entity>()
+    private val allPortals = mutableMapOf<String, Portal>()
     private val allLinks = mutableMapOf<String, Link>()
     private val allFields = mutableMapOf<String, Field>()
 
@@ -32,8 +41,8 @@ class MapViewModel(userData: UserData) : ViewModel(), OnDataReadyCallback, OnCel
     private var viewport = LatLngBounds(LatLng(0.0, 0.0), LatLng(0.0, 0.0))
     private var zoom = 21
 
-    private val _portals = MutableLiveData<Map<String, Entity>>()
-    val portals: LiveData<Map<String, Entity>> = _portals
+    private val _portals = MutableLiveData<Map<String, Portal>>()
+    val portals: LiveData<Map<String, Portal>> = _portals
 
     private val _cellLines = MutableLiveData<Map<S2CellId, PolylineOptions>>()
     val cellLines: LiveData<Map<S2CellId, PolylineOptions>> = _cellLines
@@ -46,15 +55,11 @@ class MapViewModel(userData: UserData) : ViewModel(), OnDataReadyCallback, OnCel
 
     private val _cellCache = mutableMapOf<String, CellData>()
 
-    init {
-        _user.value = userData
-    }
-
     fun updateRegion(r: LatLngBounds, z: Int) {
         viewport = r
         zoom = z
-        model.updateCells(z, r, this)
-        model.refreshData(user.value!!, r, z, this)
+        updateCellsInRegion(r, z, this)
+        cellsRepo.getCells(r, z, this)
         updateVisibleLinks()
         updateVisiblePortals()
         updateVisibleFields()
@@ -153,19 +158,9 @@ class MapViewModel(userData: UserData) : ViewModel(), OnDataReadyCallback, OnCel
         }
     }
 
-    fun setUser(user: UserData) {
-        _user.postValue(user)
-    }
-
-    override fun onAuthNeeded() {
-        _user.postValue(
-            UserData("", "")
-        )
-    }
-
     override fun onCellDataReceived(
         cellId: String,
-        portals: Map<String, Entity>,
+        portals: Map<String, Portal>,
         links: Map<String, Link>,
         fields: Map<String, Field>
     ) {
@@ -208,7 +203,8 @@ class MapViewModel(userData: UserData) : ViewModel(), OnDataReadyCallback, OnCel
                 allFields[p.key] = p.value
             }
         }
-        _cellCache[cellId] = CellData(portals, links, fields)
+        _cellCache[cellId] =
+            CellData(portals, links, fields)
         updateVisibleFields()
         updateVisibleLinks()
         updateVisiblePortals()
@@ -225,5 +221,29 @@ class MapViewModel(userData: UserData) : ViewModel(), OnDataReadyCallback, OnCel
             }
             _cellLines.postValue(new)
         }
+    }
+
+    fun updateCellsInRegion(region: LatLngBounds, zoom: Int, callback: OnDataReadyCallback) {
+        val zoomToLevel = arrayOf(8,8,8,8,7,7,7,6,6,5,4,4,3,2,2,1,1)
+        val level = if(zoom >= zoomToLevel.size) { 0 } else { zoomToLevel[zoom] }
+        val ne = getXYTile(
+            region.northeast.latitude,
+            region.northeast.longitude,
+            zoom
+        )
+        val sw = getXYTile(
+            region.southwest.latitude,
+            region.southwest.longitude,
+            zoom
+        )
+        val tiles = mutableListOf<String>()
+        for (y in ne.second..sw.second) {
+            for (x in sw.first..ne.first) {
+                tiles.add("${zoom}_${x}_${y}_${level}_8_100")
+            }
+        }
+        tiles.withIndex()
+            .groupBy { it.index / 30 }
+            .map { ingressRepo.getTilesInfo(tiles, callback) }
     }
 }
