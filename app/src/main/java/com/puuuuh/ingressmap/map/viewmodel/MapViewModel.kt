@@ -65,7 +65,7 @@ class MapViewModel(userData: UserData) : ViewModel(), OnDataReadyCallback, OnCel
             if (!showFields || zoom < 13) {
                 mapOf()
             } else {
-                allFields.filter { field -> field.value.points.any { viewport.contains(it.LatLng) } }
+                allFields.filter { field -> field.value.bounds.intersects(viewport) }
             })
     }
 
@@ -74,8 +74,19 @@ class MapViewModel(userData: UserData) : ViewModel(), OnDataReadyCallback, OnCel
             if (!showLinks || zoom < 14) {
                 mapOf()
             } else {
-                allLinks.filter { link -> link.value.points.any { viewport.contains(it.LatLng) } }
+                allLinks.filter { link ->  link.value.bounds.intersects(viewport) }
             })
+    }
+
+    private fun LatLngBounds.intersects(viewport: LatLngBounds): Boolean {
+        val thisNorthWest = LatLng(viewport.northeast.latitude, viewport.southwest.longitude)
+        val thisSouthEast = LatLng(viewport.southwest.latitude, viewport.northeast.longitude)
+        val vpNorthWest = LatLng(this.northeast.latitude, this.southwest.longitude)
+        val vpSouthEast = LatLng(this.southwest.latitude, this.northeast.longitude)
+        return viewport.contains(this.northeast) || viewport.contains(this.southwest) ||
+                viewport.contains(thisNorthWest) || viewport.contains(thisSouthEast) ||
+                this.contains(viewport.northeast) || this.contains(viewport.southwest) ||
+                this.contains(vpNorthWest) || this.contains(vpSouthEast)
     }
 
     private fun updateVisiblePortals() {

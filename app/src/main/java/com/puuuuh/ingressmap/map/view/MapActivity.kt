@@ -75,12 +75,12 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
                     if (old.position != pos) {
                         old.position = pos
                     }
-                    if (old.tag != iconRes) {
+                    if (old.tag as String != i.value.team) {
                         old.setIcon(BitmapDescriptorFactory.fromResource(iconRes))
                     }
                     newPortals[i.key] = old
                 }
-                newPortals[i.key]!!.tag = iconRes
+                newPortals[i.key]!!.tag = i.value.team
             }
             for (l in portals) {
                 l.value.remove()

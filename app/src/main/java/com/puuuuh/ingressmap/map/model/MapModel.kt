@@ -42,6 +42,7 @@ data class Entity (val raw: ArrayList<Any>) {
         team = raw[1] as String
         lat = raw[2] as Double / 1000000
         lng = raw[3] as Double / 1000000
+
         pic = if (raw[7] is String) {
             raw[7] as String
         } else {
@@ -56,6 +57,7 @@ data class Link(val raw: ArrayList<Any>) {
 
     var team = ""
     var points = arrayOf<Point>()
+    var bounds = LatLngBounds(LatLng(0.0, 0.0), LatLng(0.0, 0.0));
 
     init {
         team = raw[1] as String
@@ -69,6 +71,11 @@ data class Link(val raw: ArrayList<Any>) {
                 raw[7] as Double / 1000000
             ))
         )
+        bounds = LatLngBounds.builder()
+            .include(points[0].LatLng)
+            .include(points[1].LatLng)
+            .build()
+
     }
 }
 
@@ -77,6 +84,7 @@ data class Field(val raw: ArrayList<Any>) {
 
     var team = ""
     var points = arrayOf<Point>()
+    var bounds = LatLngBounds(LatLng(0.0, 0.0), LatLng(0.0, 0.0));
 
     init {
         team = raw[1] as String
@@ -95,6 +103,11 @@ data class Field(val raw: ArrayList<Any>) {
                 pointsRaw[2][2] as Double / 1000000
             ))
         )
+        bounds = LatLngBounds.builder()
+            .include(points[0].LatLng)
+            .include(points[1].LatLng)
+            .include(points[2].LatLng)
+            .build()
     }
 }
 
