@@ -44,6 +44,9 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
         ).get(MapViewModel::class.java)
 
         mapViewModel.portals.observe(this, androidx.lifecycle.Observer {
+            if (!this::mMap.isInitialized) {
+                return@Observer
+            }
             val newPortals = mutableMapOf<String, Marker>()
             for (i in it) {
                 val old = portals.remove(i.key)
@@ -83,6 +86,9 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
             portals = newPortals
         })
         mapViewModel.links.observe(this, androidx.lifecycle.Observer { data ->
+            if (!this::mMap.isInitialized) {
+                return@Observer
+            }
             val newLinks = mutableMapOf<String, Polyline>()
             for (i in data) {
                 val old = links.remove(i.key)
@@ -115,6 +121,9 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
             links = newLinks
         })
         mapViewModel.fields.observe(this, androidx.lifecycle.Observer { data ->
+            if (!this::mMap.isInitialized) {
+                return@Observer
+            }
             val newFields = mutableMapOf<String, Polygon>()
             for (i in data) {
                 val old = fields.remove(i.key)
@@ -138,6 +147,9 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
             fields = newFields
         })
         mapViewModel.cellLines.observe(this, androidx.lifecycle.Observer { data ->
+            if (!this::mMap.isInitialized) {
+                return@Observer
+            }
             val newLines = hashMapOf<S2CellId, Polyline>()
             data.map {
                 var line = lines[it.key]
