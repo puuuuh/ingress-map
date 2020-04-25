@@ -15,6 +15,7 @@ object Settings {
     private const val LAST_ZOOM = "LAST_ZOOM"
     private const val TOKEN = "TOKEN"
     private const val CSRFTOKEN = "CSRFTOKEN"
+    private const val API_VERSION = "API_VERSION"
     private var mSharedPref: SharedPreferences? = null
 
     fun init(context: Context) {
@@ -64,6 +65,15 @@ object Settings {
         set(value) {
             mSharedPref?.edit()
                 ?.putFloat(LAST_ZOOM, value)
+                ?.apply()
+        }
+    var apiVersion: String
+        get() {
+            return mSharedPref?.getString(API_VERSION, "")!!
+        }
+        set(value) {
+            mSharedPref?.edit()
+                ?.putString(API_VERSION, value)
                 ?.apply()
         }
     var token: String

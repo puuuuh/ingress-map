@@ -58,6 +58,9 @@ class LoginActivity : AppCompatActivity() {
                                 }
                             }
                         }
+                        view.evaluateJavascript("var re = /b.v=\"(.*?)\"/;\n; re.exec(Le.prototype.f.toString())[1];") {
+                            Settings.apiVersion = it.trim('"')
+                        }
                         Settings.token = token
                         Settings.csrfToken = csrfToken
                         finish()

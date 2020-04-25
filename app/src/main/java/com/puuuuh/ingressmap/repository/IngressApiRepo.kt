@@ -5,11 +5,10 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.gson.Gson
 import com.google.gson.internal.LinkedTreeMap
+import com.puuuuh.ingressmap.settings.Settings
 import okhttp3.*
 import java.io.IOException
 import java.net.URL
-
-const val apiVersion = "e84906a74ad12f19e8c0f930b566de42a5ec44f9"
 
 interface OnDataReadyCallback {
     fun onCellDataReceived(cellId: String, portal: Map<String, Portal>,
@@ -22,11 +21,11 @@ interface OnPortalExReadyCallback {
 }
 
 data class GetEntitiesPayload(val tileKeys: List<String>) {
-    val v = apiVersion
+    val v = Settings.apiVersion
 }
 
 data class GetPortalDataPayload(val guid: String) {
-    val v = apiVersion
+    val v = Settings.apiVersion
 }
 
 data class GetEntitiesResponse (
@@ -219,7 +218,6 @@ class IngressApiRepo(val context: Context) {
                 } catch (e: Exception) {
                     print(e.message)
                 }
-
             }
         })
     }
