@@ -236,7 +236,7 @@ class IngressApiRepo(val context: Context) {
             }
 
             override fun onResponse(call: Call?, response: Response?) {
-                if (response!!.code() == 400){
+                if (response!!.code() == 400 && tiles.size > 2){
                     tiles.withIndex()
                         .groupBy { it.index / (tiles.size / 2) }
                         .map {
