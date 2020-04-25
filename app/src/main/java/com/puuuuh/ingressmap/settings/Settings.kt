@@ -3,7 +3,10 @@ package com.puuuuh.ingressmap.settings
 import android.app.Activity
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import com.google.android.gms.maps.model.LatLng
+import com.puuuuh.ingressmap.repository.Portal
 
 object Settings {
     private const val APP_SETTINGS = "APP_SETTINGS"
@@ -18,8 +21,16 @@ object Settings {
     private const val API_VERSION = "API_VERSION"
     private var mSharedPref: SharedPreferences? = null
 
+    private val _liveToken = MutableLiveData<String>()
+    val liveToken: LiveData<String> = _liveToken
+
     fun init(context: Context) {
         mSharedPref = context.getSharedPreferences(APP_SETTINGS, Activity.MODE_PRIVATE);
+        _liveToken.value = this.token
+
+        mSharedPref!!.registerOnSharedPreferenceChangeListener { _: SharedPreferences, s: String ->
+            _liveToken.value = this.token
+        }
     }
 
     var showFields: Boolean

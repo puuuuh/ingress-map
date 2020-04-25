@@ -3,7 +3,10 @@ package com.puuuuh.ingressmap.repository
 import android.content.Context
 import android.content.Intent
 import android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+import android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP
+import androidx.core.app.ActivityCompat.startActivityForResult
 import androidx.core.content.ContextCompat.startActivity
+import com.puuuuh.ingressmap.MainApplication
 import com.puuuuh.ingressmap.view.LoginActivity
 import com.puuuuh.ingressmap.settings.Settings
 import okhttp3.Interceptor
@@ -19,9 +22,7 @@ class AuthInterceptor(private val context: Context): Interceptor {
             .build())
         if (resp.code() == 403 || resp.code() == 200 && (resp.body()?.contentType()?.type() != "application" ||
             resp.body()?.contentType()?.subtype() != "json")) {
-            val intent = Intent(context, LoginActivity::class.java)
-            intent.flags = FLAG_ACTIVITY_NEW_TASK
-            startActivity(context, intent, null)
+            Settings.token = ""
         }
         return resp
     }

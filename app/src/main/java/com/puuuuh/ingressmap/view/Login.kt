@@ -11,19 +11,32 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.EditText
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.puuuuh.ingressmap.R
 import com.puuuuh.ingressmap.settings.Settings
+import com.puuuuh.ingressmap.viewmodel.LoginViewModel
 import kotlinx.android.synthetic.main.activity_login.*
 
 
 class LoginActivity : AppCompatActivity() {
+    private lateinit var viewModel: LoginViewModel
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_login)
+        viewModel = ViewModelProvider(this).get(LoginViewModel::class.java)
+        viewModel.setTokens("", "")
+        viewModel.setVersion("")
+
+        viewModel.authInfo.observe(this, Observer {
+            if (it.csrf.isNotEmpty() && it.token.isNotEmpty() && it.version.isNotEmpty()) {
+                finish()
+            }
+        })
+
 
         login_webview.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(
@@ -58,12 +71,14 @@ class LoginActivity : AppCompatActivity() {
                                 }
                             }
                         }
+
                         view.evaluateJavascript("var re = /b.v=\"(.*?)\"/;\n; re.exec(Le.prototype.f.toString())[1];") {
                             Settings.apiVersion = it.trim('"')
+                            viewModel.setVersion(it.trim('"'))
                         }
                         Settings.token = token
                         Settings.csrfToken = csrfToken
-                        finish()
+                        viewModel.setTokens(token, csrfToken)
                     }
                 }
 
@@ -76,19 +91,4 @@ class LoginActivity : AppCompatActivity() {
 
         login_webview.loadUrl("https://accounts.google.com/o/oauth2/v2/auth?client_id=369030586920-h43qso8aj64ft2h5ruqsqlaia9g9huvn.apps.googleusercontent.com&redirect_uri=https://intel.ingress.com/intel&prompt=consent%20select_account&state=GOOGLE&scope=email%20profile&response_type=code")
     }
-}
-
-/**
- * Extension function to simplify setting an afterTextChanged action to EditText components.
- */
-fun EditText.afterTextChanged(afterTextChanged: (String) -> Unit) {
-    this.addTextChangedListener(object : TextWatcher {
-        override fun afterTextChanged(editable: Editable?) {
-            afterTextChanged.invoke(editable.toString())
-        }
-
-        override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {}
-
-        override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {}
-    })
 }

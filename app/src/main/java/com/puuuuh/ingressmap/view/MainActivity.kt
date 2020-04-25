@@ -2,10 +2,12 @@ package com.puuuuh.ingressmap.view
 
 import android.Manifest
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import androidx.core.app.ActivityCompat
+import androidx.lifecycle.Observer
 import com.google.android.libraries.places.api.Places
 import com.puuuuh.ingressmap.R
 import com.puuuuh.ingressmap.settings.Settings
@@ -17,6 +19,13 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         Settings.init(applicationContext)
+
+        Settings.liveToken.observe(this, Observer {
+            if (it == "") {
+                startLogin()
+            }
+        })
+
         Places.initialize(applicationContext, getString(R.string.google_maps_key))
         fineLocationRequest()
     }
@@ -42,5 +51,10 @@ class MainActivity : AppCompatActivity() {
     private fun startMap() {
         val intent = Intent(this, MapActivity::class.java)
         startActivityForResult(intent, 0)
+    }
+
+    private fun startLogin() {
+        val intent = Intent(this, LoginActivity::class.java)
+        startActivity(intent)
     }
 }
