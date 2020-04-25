@@ -224,26 +224,30 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
     }
 
     fun updateCellsInRegion(region: LatLngBounds, zoom: Int, callback: OnDataReadyCallback) {
+
+        val targetZoom = if (zoom < 13) zoom else 21
         val zoomToLevel = arrayOf(8,8,8,8,7,7,7,6,6,5,4,4,3,2,2,1,1)
-        val level = if(zoom >= zoomToLevel.size) { 0 } else { zoomToLevel[zoom] }
+        val level = if(targetZoom >= zoomToLevel.size) { 0 } else { zoomToLevel[targetZoom] }
         val ne = getXYTile(
             region.northeast.latitude,
             region.northeast.longitude,
-            zoom
+            targetZoom
         )
         val sw = getXYTile(
             region.southwest.latitude,
             region.southwest.longitude,
-            zoom
+            targetZoom
         )
         val tiles = mutableListOf<String>()
         for (y in ne.second..sw.second) {
             for (x in sw.first..ne.first) {
-                tiles.add("${zoom}_${x}_${y}_${level}_8_100")
+                tiles.add("${targetZoom}_${x}_${y}_${level}_8_100")
             }
         }
         tiles.withIndex()
-            .groupBy { it.index / 30 }
-            .map { ingressRepo.getTilesInfo(tiles, callback) }
+            .groupBy { it.index / 20 }
+            .map {
+                ingressRepo.getTilesInfo(it.value.map { it.value }, callback)
+            }
     }
 }

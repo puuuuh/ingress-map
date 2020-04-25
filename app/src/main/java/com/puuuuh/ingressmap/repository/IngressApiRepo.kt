@@ -194,7 +194,7 @@ class IngressApiRepo(val context: Context) {
     }
 
     fun getExtendedPortalData(guid: String, callback: OnPortalExReadyCallback, retry: Int = 0) {
-        if (retry > 1) {
+        if (retry > 2) {
             return
         }
         val g = Gson()
@@ -223,7 +223,7 @@ class IngressApiRepo(val context: Context) {
     }
 
     fun getTilesInfo( tiles: List<String>, callback: OnDataReadyCallback, retry: Int = 0) {
-        if (retry > 1) {
+        if (retry > 2) {
             return
         }
         val g = Gson()
@@ -236,8 +236,18 @@ class IngressApiRepo(val context: Context) {
             }
 
             override fun onResponse(call: Call?, response: Response?) {
-                if (response!!.code() != 200)
+                if (response!!.code() == 400){
+                    tiles.withIndex()
+                        .groupBy { it.index / (tiles.size / 2) }
+                        .map {
+                            getTilesInfo(it.value.map { it.value }, callback, retry)
+                        }
                     return
+                }
+                if (response!!.code() != 200){
+                    return
+                }
+
                 try {
                     val next = mutableListOf<String>()
                     val json = response.body()?.string()
