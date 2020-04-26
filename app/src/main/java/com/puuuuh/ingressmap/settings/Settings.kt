@@ -29,7 +29,9 @@ object Settings {
         _liveToken.value = this.token
 
         mSharedPref!!.registerOnSharedPreferenceChangeListener { _: SharedPreferences, s: String ->
-            _liveToken.value = this.token
+            when (s) {
+                TOKEN -> _liveToken.value = this.token
+            }
         }
     }
 

@@ -12,7 +12,7 @@ import com.puuuuh.ingressmap.settings.Settings
 import okhttp3.Interceptor
 import okhttp3.Response
 
-class AuthInterceptor(private val context: Context): Interceptor {
+class AuthInterceptor(): Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val req = chain.request()
         val resp = chain.proceed(req.newBuilder()

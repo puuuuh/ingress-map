@@ -1,6 +1,8 @@
 package com.puuuuh.ingressmap.viewmodel
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -13,6 +15,8 @@ import kotlin.math.*
 
 data class CellData(val portals: Map<String, Portal>, val links: Map<String, Link>, val fields: Map<String, Field>)
 
+data class Status(val requestsInProgress: Int)
+
 private fun getXYTile(lat : Double, lng: Double, zoom : Int) : Pair<Int, Int> {
     val tileCounts = arrayOf(1,1,1,40,40,80,80,320,1000,2000,2000,4000,8000,16000,16000,32000)
     val latRad = Math.toRadians(lat)
@@ -24,8 +28,9 @@ private fun getXYTile(lat : Double, lng: Double, zoom : Int) : Pair<Int, Int> {
 }
 
 class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnCellsReadyCallback {
-    private val ingressRepo = IngressApiRepo(context)
+    private val ingressRepo = IngressApiRepo()
     private val cellsRepo = S2CellsRepo()
+    private val handler = Handler(context.mainLooper)
 
     // All cached entities
     private val allPortals = mutableMapOf<String, Portal>()
@@ -53,12 +58,15 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
     private val _fields = MutableLiveData<Map<String, Field>>()
     val fields: LiveData<Map<String, Field>> = _fields
 
+    private val _status = MutableLiveData<Status>()
+    val status: LiveData<Status> = _status
+
     private val _cellCache = mutableMapOf<String, CellData>()
 
     fun updateRegion(r: LatLngBounds, z: Int) {
         viewport = r
         zoom = z
-        updateCellsInRegion(r, z, this)
+        updateCellsInRegion(r, z)
         cellsRepo.getCells(r, z, this)
         updateVisibleLinks()
         updateVisiblePortals()
@@ -203,11 +211,22 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
                 allFields[p.key] = p.value
             }
         }
-        _cellCache[cellId] =
-            CellData(portals, links, fields)
+        _cellCache[cellId] = CellData(portals, links, fields)
         updateVisibleFields()
         updateVisibleLinks()
         updateVisiblePortals()
+    }
+
+    override fun onRequestStart() {
+        handler.post {
+            _status.value = Status((_status.value?.requestsInProgress ?: 0) + 1)
+        }
+    }
+
+    override fun onRequestEnd() {
+        handler.post {
+            _status.value = Status((_status.value?.requestsInProgress ?: 0) - 1 )
+        }
     }
 
     override fun onCellsReady(data: Map<S2CellId, PolylineOptions>) {
@@ -223,7 +242,7 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
         }
     }
 
-    fun updateCellsInRegion(region: LatLngBounds, zoom: Int, callback: OnDataReadyCallback) {
+    private fun updateCellsInRegion(region: LatLngBounds, zoom: Int) {
 
         val targetZoom = if (zoom < 13) zoom else 21
         val zoomToLevel = arrayOf(8,8,8,8,7,7,7,6,6,5,4,4,3,2,2,1,1)
@@ -247,7 +266,7 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
         tiles.withIndex()
             .groupBy { it.index / 20 }
             .map {
-                ingressRepo.getTilesInfo(it.value.map { it.value }, callback)
+                ingressRepo.getTilesInfo(it.value.map { it.value }, this)
             }
     }
 }

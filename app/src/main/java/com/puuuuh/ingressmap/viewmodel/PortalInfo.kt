@@ -8,7 +8,7 @@ import com.puuuuh.ingressmap.repository.*
 
 
 class PortalInfo(context: Context) : ViewModel(), OnPortalExReadyCallback {
-    private val ingressRepo = IngressApiRepo(context)
+    private val ingressRepo = IngressApiRepo()
 
     private val _lvl = MutableLiveData<Int>()
     val lvl: LiveData<Int> = _lvl

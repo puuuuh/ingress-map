@@ -1,6 +1,5 @@
 package com.puuuuh.ingressmap.repository
 
-import android.content.Context
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.gson.Gson
@@ -14,6 +13,8 @@ interface OnDataReadyCallback {
     fun onCellDataReceived(cellId: String, portal: Map<String, Portal>,
                            links: Map<String, Link>,
                            fields: Map<String, Field>)
+    fun onRequestStart()
+    fun onRequestEnd()
 }
 
 interface OnPortalExReadyCallback {
@@ -176,12 +177,12 @@ data class Portal(val guid: String, val raw: ArrayList<Any>) {
 }
 
 
-class IngressApiRepo(val context: Context) {
+class IngressApiRepo() {
     var okHttpClient: OkHttpClient = OkHttpClient()
 
     init {
         okHttpClient = OkHttpClient.Builder()
-            .addInterceptor(AuthInterceptor(context))
+            .addInterceptor(AuthInterceptor())
             .build()
     }
 
@@ -226,6 +227,9 @@ class IngressApiRepo(val context: Context) {
         if (retry > 2) {
             return
         }
+
+        callback.onRequestStart()
+
         val g = Gson()
 
         val payload = g.toJson(GetEntitiesPayload(tiles))
@@ -233,6 +237,7 @@ class IngressApiRepo(val context: Context) {
         apiCall("getEntities", payload, object: Callback {
             override fun onFailure(call: Call?, e: IOException?) {
                 getTilesInfo(tiles, callback, retry+1)
+                callback.onRequestEnd()
             }
 
             override fun onResponse(call: Call?, response: Response?) {
@@ -242,9 +247,11 @@ class IngressApiRepo(val context: Context) {
                         .map {
                             getTilesInfo(it.value.map { it.value }, callback, retry)
                         }
+                    callback.onRequestEnd()
                     return
                 }
-                if (response!!.code() != 200){
+                if (response.code() != 200){
+                    callback.onRequestEnd()
                     return
                 }
 
@@ -282,7 +289,7 @@ class IngressApiRepo(val context: Context) {
                 } catch (e: Exception) {
                     print(e.message)
                 }
-
+                callback.onRequestEnd()
             }
         })
     }

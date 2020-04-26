@@ -24,8 +24,6 @@ import com.puuuuh.ingressmap.viewmodel.ViewmodelFactory
 import kotlinx.android.synthetic.main.activity_map.*
 import java.util.*
 
-private const val LOGIN_RC = 0
-
 class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCameraIdleListener, GoogleMap.OnMarkerClickListener {
     private lateinit var mMap: GoogleMap
     private var lines = hashMapOf<S2CellId, Polyline>()
@@ -176,6 +174,14 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
                 it.value.remove()
             }
             lines = newLines
+        })
+
+        mapViewModel.status.observe(this, androidx.lifecycle.Observer {
+            statusView.text = "Status: " + if (it.requestsInProgress == 0) {
+                    "up to date"
+            } else {
+                "${it.requestsInProgress} request in progress, please, wait..."
+            }
         })
 
         (map as SupportMapFragment).getMapAsync(this)
