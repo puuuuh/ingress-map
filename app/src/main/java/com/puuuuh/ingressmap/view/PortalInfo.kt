@@ -8,8 +8,8 @@ import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.puuuuh.ingressmap.R
-import com.puuuuh.ingressmap.viewmodel.PortalInfo
 import com.puuuuh.ingressmap.repository.Portal
+import com.puuuuh.ingressmap.viewmodel.PortalInfo
 import com.puuuuh.ingressmap.viewmodel.ViewmodelFactory
 import com.squareup.picasso.Picasso
 import kotlinx.android.synthetic.main.portal_info_fragment.*

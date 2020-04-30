@@ -1,37 +1,33 @@
 package com.puuuuh.ingressmap.repository
 
-import android.os.AsyncTask
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.common.geometry.*
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 interface OnCellsReadyCallback {
     fun onCellsReady(data: Map<S2CellId, PolylineOptions>)
 }
 
-class TaskArg(val zoom: Int, val bounds: LatLngBounds)
-
 class S2CellsRepo {
     fun getCells(bounds: LatLngBounds, zoom: Int, callback: OnCellsReadyCallback) {
-        CalcCells(callback).execute(TaskArg(zoom, bounds))
-    }
-
-    class CalcCells(private val callback: OnCellsReadyCallback): AsyncTask<TaskArg, Any?, Map<S2CellId, PolylineOptions>>() {
-        override fun doInBackground(params: Array<TaskArg>): Map<S2CellId, PolylineOptions> {
-            val arg = params[0]
+        GlobalScope.launch {
             val r = mutableMapOf<S2CellId, PolylineOptions>()
 
-            val northeast = S2LatLng.fromDegrees(arg.bounds.northeast.latitude, arg.bounds.northeast.longitude)
-            val southwest = S2LatLng.fromDegrees(arg.bounds.southwest.latitude, arg.bounds.southwest.longitude)
+            val northeast =
+                S2LatLng.fromDegrees(bounds.northeast.latitude, bounds.northeast.longitude)
+            val southwest =
+                S2LatLng.fromDegrees(bounds.southwest.latitude, bounds.southwest.longitude)
             val rect = S2LatLngRect.fromPointPair(northeast, southwest)
 
             val cells14 = ArrayList<S2CellId>()
             val cells17 = ArrayList<S2CellId>()
 
-            if (arg.zoom > 12)
+            if (zoom > 12)
                 S2RegionCoverer.getSimpleCovering(rect, rect.center.toPoint(), 14, cells14)
-            if (arg.zoom >= 14.9)
+            if (zoom >= 14.9)
                 S2RegionCoverer.getSimpleCovering(rect, rect.center.toPoint(), 17, cells17)
 
             for (cellId in cells17) {
@@ -54,7 +50,6 @@ class S2CellsRepo {
                 r[cellId] = line
             }
             callback.onCellsReady(r)
-            return r
         }
     }
 }

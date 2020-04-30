@@ -17,9 +17,9 @@ import com.google.android.libraries.places.widget.AutocompleteSupportFragment
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener
 import com.google.common.geometry.S2CellId
 import com.puuuuh.ingressmap.R
-import com.puuuuh.ingressmap.viewmodel.MapViewModel
 import com.puuuuh.ingressmap.repository.Portal
 import com.puuuuh.ingressmap.settings.Settings
+import com.puuuuh.ingressmap.viewmodel.MapViewModel
 import com.puuuuh.ingressmap.viewmodel.ViewmodelFactory
 import kotlinx.android.synthetic.main.activity_map.*
 import java.util.*

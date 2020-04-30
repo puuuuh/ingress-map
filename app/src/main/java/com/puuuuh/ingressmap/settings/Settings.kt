@@ -6,7 +6,6 @@ import android.content.SharedPreferences
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.google.android.gms.maps.model.LatLng
-import com.puuuuh.ingressmap.repository.Portal
 
 object Settings {
     private const val APP_SETTINGS = "APP_SETTINGS"

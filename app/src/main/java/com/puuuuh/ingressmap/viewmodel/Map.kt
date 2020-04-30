@@ -1,10 +1,7 @@
 package com.puuuuh.ingressmap.viewmodel
 
-import android.annotation.SuppressLint
 import android.content.Context
-import android.os.AsyncTask
 import android.os.Handler
-import android.os.Looper
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -13,6 +10,8 @@ import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.common.geometry.S2CellId
 import com.puuuuh.ingressmap.repository.*
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import kotlin.math.*
 
 data class CellData(val portals: Map<String, Portal>, val links: Map<String, Link>, val fields: Map<String, Field>)
@@ -69,15 +68,13 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
         viewport = r
         zoom = z
 
-        object: AsyncTask<Unit, Unit, Unit>() {
-            override fun doInBackground(params: Array<Unit>) {
-                updateCellsInRegion(r, z)
-                cellsRepo.getCells(r, z, this@MapViewModel)
-                updateVisibleLinks()
-                updateVisiblePortals()
-                updateVisibleFields()
-            }
-        }.execute()
+        GlobalScope.launch {
+            updateCellsInRegion(r, z)
+            cellsRepo.getCells(r, z, this@MapViewModel)
+            updateVisibleLinks()
+            updateVisiblePortals()
+            updateVisibleFields()
+        }
     }
 
     private fun updateVisibleFields() {
@@ -244,6 +241,8 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
             updateVisibleFields()
             updateVisibleLinks()
             updateVisiblePortals()
+        } else {
+            print("dont change")
         }
 
     }
