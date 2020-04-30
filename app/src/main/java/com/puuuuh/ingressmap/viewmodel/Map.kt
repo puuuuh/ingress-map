@@ -1,6 +1,8 @@
 package com.puuuuh.ingressmap.viewmodel
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.os.AsyncTask
 import android.os.Handler
 import android.os.Looper
 import androidx.lifecycle.LiveData
@@ -66,29 +68,36 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
     fun updateRegion(r: LatLngBounds, z: Int) {
         viewport = r
         zoom = z
-        updateCellsInRegion(r, z)
-        cellsRepo.getCells(r, z, this)
-        updateVisibleLinks()
-        updateVisiblePortals()
-        updateVisibleFields()
+
+        object: AsyncTask<Unit, Unit, Unit>() {
+            override fun doInBackground(params: Array<Unit>) {
+                updateCellsInRegion(r, z)
+                cellsRepo.getCells(r, z, this@MapViewModel)
+                updateVisibleLinks()
+                updateVisiblePortals()
+                updateVisibleFields()
+            }
+        }.execute()
     }
 
     private fun updateVisibleFields() {
-        _fields.postValue(
-            if (!showFields || zoom < 13) {
-                mapOf()
-            } else {
-                allFields.filter { field -> field.value.bounds.intersects(viewport) }
-            })
+        val new = if (!showFields || zoom < 13) {
+            mapOf()
+        } else {
+            allFields.filter { field -> field.value.bounds.intersects(viewport) }
+        }
+        if (new != _fields.value)
+            _fields.postValue(new)
     }
 
     private fun updateVisibleLinks() {
-        _links.postValue(
-            if (!showLinks || zoom < 14) {
-                mapOf()
-            } else {
-                allLinks.filter { link ->  link.value.bounds.intersects(viewport) }
-            })
+        val new = if (!showLinks || zoom < 14) {
+            mapOf()
+        } else {
+            allLinks.filter { link ->  link.value.bounds.intersects(viewport) }
+        }
+        if (new != _links.value)
+            _links.postValue(new)
     }
 
     private fun LatLngBounds.intersects(viewport: LatLngBounds): Boolean {
@@ -138,13 +147,13 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
     }
 
     private fun updateVisiblePortals() {
-        _portals.postValue(
-            if (!showPortal || zoom < 13.5) {
-                mapOf()
-            } else {
-                allPortals.filter { viewport.contains(LatLng(it.value.lat, it.value.lng)) }
-            }
-        )
+        val new = if (!showPortal || zoom < 13.5) {
+            mapOf()
+        } else {
+            allPortals.filter { viewport.contains(LatLng(it.value.lat, it.value.lng)) }
+        }
+        if (new != _portals.value)
+            _portals.postValue(new)
     }
 
     fun setPortalsVisible(value: Boolean) {
@@ -173,48 +182,70 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
         fields: Map<String, Field>
     ) {
         val cachedVersion = _cellCache[cellId]
+        var updates = 0
         if (cachedVersion != null) {
             val removedPortals = cachedVersion.portals.keys.minus(portals.keys)
             removedPortals.map { allPortals.remove(it) }
+            updates += removedPortals.size
             for (p in portals) {
-                val old = cachedVersion.portals[p.key]
+                val old = allPortals[p.key]
                 if (old != p.value) {
                     allPortals[p.key] = p.value
+                    updates++
                 }
             }
 
             val removedLinks = cachedVersion.links.keys.minus(links.keys)
             removedLinks.map { allLinks.remove(it) }
+            updates += removedLinks.size
             for (p in links) {
-                val old = cachedVersion.links[p.key]
+                val old = allLinks[p.key]
                 if (old != p.value) {
                     allLinks[p.key] = p.value
+                    updates++
                 }
             }
 
             val removedFields = cachedVersion.fields.keys.minus(fields.keys)
             removedFields.map { allFields.remove(it) }
+            updates += removedFields.size
             for (p in fields) {
-                val old = cachedVersion.fields[p.key]
+                val old = allFields[p.key]
                 if (old != p.value) {
                     allFields[p.key] = p.value
+                    updates++
                 }
             }
         } else {
             for (p in portals) {
-                allPortals[p.key] = p.value
+                val old = allPortals[p.key]
+                if (old != p.value) {
+                    allPortals[p.key] = p.value
+                    updates++
+                }
             }
             for (p in links) {
-                allLinks[p.key] = p.value
+                val old = allLinks[p.key]
+                if (old != p.value) {
+                    allLinks[p.key] = p.value
+                    updates++
+                }
             }
             for (p in fields) {
-                allFields[p.key] = p.value
+                val old = allFields[p.key]
+                if (old != p.value) {
+                    allFields[p.key] = p.value
+                    updates++
+                }
             }
         }
         _cellCache[cellId] = CellData(portals, links, fields)
-        updateVisibleFields()
-        updateVisibleLinks()
-        updateVisiblePortals()
+        if (updates > 0) {
+            updateVisibleFields()
+            updateVisibleLinks()
+            updateVisiblePortals()
+        }
+
     }
 
     override fun onRequestStart() {
