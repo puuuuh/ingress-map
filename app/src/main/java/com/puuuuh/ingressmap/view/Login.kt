@@ -68,8 +68,7 @@ class LoginActivity : AppCompatActivity() {
                                 }
                             }
                         }
-
-                        view.evaluateJavascript("var re = /b.v=\"(.*?)\"/;\n; re.exec(Le.prototype.f.toString())[1];") {
+                        view.evaluateJavascript("var re = /gen_dashboard_(.*?).js/; re.exec(document.body.innerHTML)[1];") {
                             Settings.apiVersion = it.trim('"')
                             viewModel.setVersion(it.trim('"'))
                         }
