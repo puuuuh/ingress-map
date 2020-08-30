@@ -23,6 +23,11 @@
                 android:title="Portals"
                 android:checkable="true">
             </item>
+            <item
+                android:id="@+id/drawMode"
+                android:title="Draw mode"
+                android:checkable="true">
+            </item>
         </menu>
     </item>
 

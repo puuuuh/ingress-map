@@ -1,5 +1,6 @@
 package com.puuuuh.ingressmap.view
 
+import android.content.DialogInterface
 import android.graphics.Color
 import android.os.Bundle
 import android.view.Menu
@@ -22,14 +23,18 @@ import com.puuuuh.ingressmap.settings.Settings
 import com.puuuuh.ingressmap.viewmodel.MapViewModel
 import com.puuuuh.ingressmap.viewmodel.ViewmodelFactory
 import kotlinx.android.synthetic.main.activity_map.*
-import java.util.*
 
-class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCameraIdleListener, GoogleMap.OnMarkerClickListener {
+
+class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
+    GoogleMap.OnMarkerClickListener, GoogleMap.OnPolylineClickListener,
+    DialogInterface.OnDismissListener {
     private lateinit var mMap: GoogleMap
     private var lines = hashMapOf<S2CellId, Polyline>()
     private var portals = mutableMapOf<String, Marker>()
     private var fields = mutableMapOf<String, Polygon>()
     private var links = mutableMapOf<String, Polyline>()
+    private var customLinks = mutableMapOf<PolylineOptions, Polyline>()
+    private var selectedPoint: Marker? = null
     private lateinit var mapViewModel: MapViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -37,7 +42,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
         setContentView(R.layout.activity_map)
         setSupportActionBar(toolbar)
 
-        mapViewModel = ViewModelProvider(this,
+        mapViewModel = ViewModelProvider(
+            this,
             ViewmodelFactory(application)
         ).get(MapViewModel::class.java)
 
@@ -65,6 +71,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
                         .position(pos)
                         .title(i.value.name)
                         .icon(BitmapDescriptorFactory.fromResource(iconRes))
+                        .zIndex(2f)
                         .anchor(0.5f, 0.5f)
                     newPortals[i.key] = mMap.addMarker(m)
                 } else {
@@ -90,12 +97,17 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
             val newLinks = mutableMapOf<String, Polyline>()
             for (i in data) {
                 val old = links.remove(i.key)
-                val color = if (i.value.team == "E") {Color.GREEN} else {Color.BLUE}
+                val color = if (i.value.team == "E") {
+                    Color.GREEN
+                } else {
+                    Color.BLUE
+                }
 
                 if (old == null) {
                     val m = PolylineOptions()
                         .add(i.value.points[0].LatLng, i.value.points[1].LatLng)
                         .width(2f)
+                        .zIndex(3f)
                         .color(color)
 
                     newLinks[i.key] = mMap.addPolyline(m)
@@ -126,12 +138,25 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
             for (i in data) {
                 val old = fields.remove(i.key)
                 if (old == null) {
-                    val color = if (i.value.team == "E") {Color.argb(100, 0, 255, 0)} else {Color.argb(100, 0, 0, 255)}
-                    val strokeColor = if (i.value.team == "E") {Color.argb(255, 0, 255, 0)} else {Color.argb(255, 0, 140, 255)}
+                    val color = if (i.value.team == "E") {
+                        Color.argb(100, 0, 255, 0)
+                    } else {
+                        Color.argb(100, 0, 0, 255)
+                    }
+                    val strokeColor = if (i.value.team == "E") {
+                        Color.argb(255, 0, 255, 0)
+                    } else {
+                        Color.argb(255, 0, 140, 255)
+                    }
                     val m = PolygonOptions()
-                        .add(i.value.points[0].LatLng, i.value.points[1].LatLng, i.value.points[2].LatLng)
+                        .add(
+                            i.value.points[0].LatLng,
+                            i.value.points[1].LatLng,
+                            i.value.points[2].LatLng
+                        )
                         .fillColor(color)
                         .strokeWidth(4f)
+                        .zIndex(2f)
                         .strokeColor(strokeColor)
 
                     newFields[i.key] = mMap.addPolygon(m)
@@ -157,12 +182,13 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
                             it.value
                                 .color(Color.rgb(239, 70, 15))
                                 .width(8f)
-                                .zIndex(2f)
+                                .zIndex(1f)
                         }
                         17 -> {
                             it.value
                                 .color(Color.rgb(8, 152, 152))
                                 .width(4f)
+                                .zIndex(0f)
                         }
                     }
                     line = mMap.addPolyline(it.value)
@@ -178,9 +204,60 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
 
         mapViewModel.status.observe(this, androidx.lifecycle.Observer {
             statusView.text = "Status: " + if (it.requestsInProgress == 0) {
-                    "up to date"
+                "up to date"
             } else {
                 "${it.requestsInProgress} request in progress, please, wait..."
+            }
+        })
+
+        mapViewModel.customLines.observe(this, androidx.lifecycle.Observer { data ->
+            val newLinks = mutableMapOf<PolylineOptions, Polyline>()
+            for (i in data) {
+                val old = customLinks.remove(i)
+                val color = Color.RED
+
+                if (old == null) {
+                    val m = PolylineOptions()
+                        .add(i.points[0], i.points[1])
+                        .width(10f)
+                        .zIndex(4f)
+                        .color(color)
+                        .clickable(true)
+
+                    newLinks[i] = mMap.addPolyline(m)
+                } else {
+                    newLinks[i] = old
+                }
+            }
+            customLinks.map {
+                it.value.remove()
+            }
+            customLinks = newLinks
+        })
+
+        mapViewModel.selectedPortal.observe(this, androidx.lifecycle.Observer { data ->
+            if (data != null) {
+                val fm = supportFragmentManager
+                val dlg = PortalInfo.newInstance(data)
+                dlg.show(fm, "fragment_alert")
+                fm.executePendingTransactions()
+                val dialog = dlg.dialog
+                if (dialog != null) {
+                    dialog.setOnDismissListener(this)
+                } else {
+                    mapViewModel.selectPortal(null)
+                }
+
+            }
+        })
+
+        mapViewModel.selectedPoint.observe(this, androidx.lifecycle.Observer { data ->
+            selectedPoint?.remove()
+            if (data != null) {
+                selectedPoint = mMap.addMarker(
+                    MarkerOptions()
+                        .position(data)
+                )
             }
         })
 
@@ -196,18 +273,14 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
                     .build()
                 mMap.animateCamera(CameraUpdateFactory.newCameraPosition(pos))
             }
+
             override fun onError(status: Status) {}
         })
 
         mapViewModel.setFieldsVisible(Settings.showFields)
         mapViewModel.setLinksVisible(Settings.showLinks)
         mapViewModel.setPortalsVisible(Settings.showPortals)
-
-        Timer().schedule(object : TimerTask() {
-            override fun run() {
-
-            }
-        }, 3000, 3000)
+        mapViewModel.setDrawMode(Settings.drawMode)
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -220,6 +293,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
         menu?.findItem(R.id.showLinks)?.isChecked = Settings.showLinks
         menu?.findItem(R.id.showFields)?.isChecked = Settings.showFields
         menu?.findItem(R.id.showPortals)?.isChecked = Settings.showPortals
+        menu?.findItem(R.id.drawMode)?.isChecked = Settings.drawMode
         return super.onPrepareOptionsMenu(menu)
     }
 
@@ -243,6 +317,12 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
                 mapViewModel.setLinksVisible(item.isChecked)
                 return true
             }
+            R.id.drawMode -> {
+                item.isChecked = !item.isChecked
+                Settings.drawMode = item.isChecked
+                mapViewModel.setDrawMode(item.isChecked)
+                return true
+            }
         }
         return super.onOptionsItemSelected(item)
     }
@@ -251,6 +331,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
         mMap = googleMap
         mMap.setMaxZoomPreference(21f)
         mMap.setOnMarkerClickListener(this)
+        mMap.setOnPolylineClickListener(this)
         mMap.setMinZoomPreference(3f)
         var zoom = Settings.lastZoom
         if (zoom < 3) {
@@ -268,17 +349,30 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,  GoogleMap.OnCamera
     override fun onCameraIdle() {
         Settings.lastPosition = mMap.cameraPosition.target
         Settings.lastZoom = mMap.cameraPosition.zoom
-        mapViewModel.updateRegion(mMap.projection.visibleRegion.latLngBounds, mMap.cameraPosition.zoom.toInt())
+        mapViewModel.updateRegion(
+            mMap.projection.visibleRegion.latLngBounds,
+            mMap.cameraPosition.zoom.toInt()
+        )
     }
 
     override fun onMarkerClick(p0: Marker?): Boolean {
         if (p0?.tag is Portal) {
-            val fm = supportFragmentManager
-            val dlg = PortalInfo.newInstance(p0.tag as Portal)
-            dlg.show(fm, "fragment_alert")
+            mapViewModel.selectPortal(p0.tag as Portal)
+            return true
+
         }
 
         return true
+    }
+
+    override fun onPolylineClick(p0: Polyline) {
+        mapViewModel.removeCustomLine(p0.points.toTypedArray())
+
+        return
+    }
+
+    override fun onDismiss(dialog: DialogInterface?) {
+        mapViewModel.selectPortal(null)
     }
 }
 

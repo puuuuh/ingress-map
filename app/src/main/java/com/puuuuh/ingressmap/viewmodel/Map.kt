@@ -42,8 +42,9 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
     private var showPortal = false
     private var showLinks = false
     private var showFields = false
+    private var drawMode = false
 
-    // Entities in current viewport
+    // Current viewport
     private var viewport = LatLngBounds(LatLng(0.0, 0.0), LatLng(0.0, 0.0))
     private var zoom = 21
 
@@ -61,6 +62,15 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
 
     private val _status = MutableLiveData<Status>()
     val status: LiveData<Status> = _status
+
+    private val _customLines = MutableLiveData<Set<PolylineOptions>>()
+    val customLines: LiveData<Set<PolylineOptions>> = _customLines
+
+    private val _selectedPoint = MutableLiveData<LatLng?>()
+    val selectedPoint: LiveData<LatLng?> = _selectedPoint
+
+    private val _selectedPortal = MutableLiveData<Portal>()
+    val selectedPortal: LiveData<Portal?> = _selectedPortal
 
     private val _cellCache = mutableMapOf<String, CellData>()
 
@@ -171,6 +181,43 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
             updateVisibleLinks()
         }
     }
+    fun setDrawMode(value: Boolean) {
+        if (drawMode != value) {
+            drawMode = value
+        }
+    }
+    fun selectPortal(value: Portal?) {
+        if (drawMode && value != null) {
+            addCustomPoint(LatLng(value.lat,value.lng))
+        } else {
+            _selectedPortal.value = value
+        }
+    }
+    private fun addCustomPoint(point: LatLng) {
+        val prev = this._selectedPoint.value
+        if (prev == null) {
+            this._selectedPoint.value = point
+        } else {
+            this._selectedPoint.value = null
+            if (prev != point) {
+                var prevLines = this._customLines.value
+                if (prevLines == null) {
+                    prevLines = emptySet()
+                }
+                this._customLines.value = setOf(*(prevLines.toTypedArray()), PolylineOptions().add(prev).add(point))
+            }
+        }
+    }
+
+    fun removeCustomLine(line: Array<LatLng>) {
+        var prevLines = this._customLines.value
+        if (prevLines == null) {
+            prevLines = emptySet()
+        }
+        this._customLines.value = prevLines.filter {
+            !(it.points[0] == line[0] && it.points[1] == line[1])
+        }.toSet()
+    }
 
     override fun onCellDataReceived(
         cellId: String,
@@ -241,10 +288,7 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
             updateVisibleFields()
             updateVisibleLinks()
             updateVisiblePortals()
-        } else {
-            print("dont change")
         }
-
     }
 
     override fun onRequestStart() {

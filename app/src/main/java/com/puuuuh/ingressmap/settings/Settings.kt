@@ -11,6 +11,7 @@ object Settings {
     private const val APP_SETTINGS = "APP_SETTINGS"
     private const val SHOW_FIELDS = "SHOW_FIELDS"
     private const val SHOW_LINKS = "SHOW_LINKS"
+    private const val DRAW_MODE = "DRAW_MODE"
     private const val SHOW_PORTALS = "SHOW_PORTALS"
     private const val LAST_LAT = "LAST_LAT"
     private const val LAST_LNG = "LAST_LNG"
@@ -56,6 +57,14 @@ object Settings {
         }
         set(value) {
             mSharedPref?.edit()?.putBoolean(SHOW_LINKS, value)?.apply()
+        }
+
+    var drawMode: Boolean
+        get() {
+            return mSharedPref?.getBoolean(DRAW_MODE, false) ?: false
+        }
+        set(value) {
+            mSharedPref?.edit()?.putBoolean(DRAW_MODE, value)?.apply()
         }
 
     var lastPosition: LatLng
