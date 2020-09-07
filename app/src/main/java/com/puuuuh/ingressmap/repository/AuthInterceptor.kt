@@ -14,7 +14,9 @@ class AuthInterceptor: Interceptor {
             .build())
         if (resp.code() == 403 || resp.code() == 200 && (resp.body()?.contentType()?.type() != "application" ||
             resp.body()?.contentType()?.subtype() != "json")) {
-            Settings.token = ""
+            if (Settings.token != "") {
+                Settings.token = ""
+            }
         }
         return resp
     }

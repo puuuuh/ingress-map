@@ -8,6 +8,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
+        android:name=".MainApplication"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
@@ -15,10 +16,9 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true"
-        android:name=".MainApplication"
         tools:targetApi="m">
+        <activity android:name=".view.MapActivity" />
 
-        <activity android:name="com.puuuuh.ingressmap.view.MapActivity" />
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="@string/google_maps_key" />
@@ -26,8 +26,25 @@
         <activity
             android:name=".view.LoginActivity"
             android:label="@string/title_activity_login" />
-        <activity android:name=".view.MainActivity" >
+        <activity android:name=".view.MainActivity">
             <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.BROWSABLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data
+                    android:host="intel.ingress.com"
+                    android:pathPrefix="/intel"
+                    android:scheme="http" />
+                <data
+                    android:host="intel.ingress.com"
+                    android:pathPrefix="/intel"
+                    android:scheme="https" />
+            </intent-filter>
+
+            <intent-filter>
+
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />

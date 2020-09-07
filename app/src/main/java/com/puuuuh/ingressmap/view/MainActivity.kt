@@ -3,10 +3,12 @@ package com.puuuuh.ingressmap.view
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.Observer
+import com.google.android.gms.maps.model.LatLng
 import com.google.android.libraries.places.api.Places
 import com.puuuuh.ingressmap.R
 import com.puuuuh.ingressmap.settings.Settings
@@ -18,6 +20,25 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         Settings.init(applicationContext)
+
+        if (intent.action == Intent.ACTION_VIEW && intent.dataString != null) {
+            val url = Uri.parse(intent.dataString)
+            val location = url.getQueryParameter("ll")
+            val zoom = url.getQueryParameter("z")
+            if (location != null) {
+                val parts = location.split(",")
+                if (parts.count() == 2) {
+                    try {
+                        Settings.lastPosition = LatLng(parts[0].toDouble(), parts[1].toDouble())
+                    } catch (e: NumberFormatException) {}
+                }
+            }
+            if (zoom != null) {
+                try {
+                    Settings.lastZoom = zoom.toFloat()
+                } catch (e: NumberFormatException) {}
+            }
+        }
 
         Settings.liveToken.observe(this, Observer {
             if (it == "") {
@@ -36,6 +57,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         when (requestCode) {
             ACCESS_FINE_LOCATION_RC -> {
                 if (grantResults.isEmpty() || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
@@ -48,8 +70,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startMap() {
-        val intent = Intent(this, MapActivity::class.java)
-        startActivityForResult(intent, 0)
+        startActivity(Intent(this, MapActivity::class.java).addFlags(
+            Intent.FLAG_ACTIVITY_CLEAR_TASK))
+        finish()
     }
 
     private fun startLogin() {
