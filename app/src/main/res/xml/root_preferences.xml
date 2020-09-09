@@ -1,0 +1,33 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:key="APP_SETTINGS">
+
+    <PreferenceCategory app:title="@string/visibility_header">
+
+        <SwitchPreferenceCompat
+            app:key="SHOW_PORTALS"
+            app:title="@string/show_portals" />
+        <SwitchPreferenceCompat
+            app:key="SHOW_LINKS"
+            app:title="@string/show_links" />
+        <SwitchPreferenceCompat
+            app:key="SHOW_FIELDS"
+            app:title="@string/show_fields" />
+        <SwitchPreferenceCompat
+            app:key="SHOW_CELLS"
+            app:title="@string/show_cells" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/drawing_header">
+        <SwitchPreferenceCompat
+            app:key="DRAW_MODE"
+            app:title="@string/draw_enable" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/permissions_header">
+        <SwitchPreferenceCompat
+            app:key="MY_LOCATION"
+            app:title="@string/my_location" />
+    </PreferenceCategory>
+
+</PreferenceScreen>
