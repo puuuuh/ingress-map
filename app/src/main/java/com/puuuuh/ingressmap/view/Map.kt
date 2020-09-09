@@ -1,5 +1,6 @@
 package com.puuuuh.ingressmap.view
 
+import android.annotation.SuppressLint
 import android.content.DialogInterface
 import android.graphics.Color
 import android.os.Bundle
@@ -34,6 +35,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
     private var fields = mutableMapOf<String, Polygon>()
     private var links = mutableMapOf<String, Polyline>()
     private var customLinks = mutableMapOf<PolylineOptions, Polyline>()
+    private var customFields = mutableMapOf<String, Polygon>()
     private var selectedPoint: Marker? = null
     private lateinit var mapViewModel: MapViewModel
 
@@ -219,7 +221,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                 if (old == null) {
                     val m = PolylineOptions()
                         .add(i.points[0], i.points[1])
-                        .width(10f)
+                        .width(4f)
                         .zIndex(4f)
                         .color(color)
                         .clickable(true)
@@ -259,6 +261,29 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
                         .position(data)
                 )
             }
+        })
+
+        mapViewModel.customFields.observe(this, androidx.lifecycle.Observer { data ->
+            val new = mutableMapOf<String, Polygon>()
+            for (i in data) {
+                val old = customFields.remove(i.key)
+                if (old == null) {
+                    val t = PolygonOptions()
+                        .add(i.value[0])
+                        .add(i.value[1])
+                        .add(i.value[2])
+                        .strokeWidth(4f)
+                        .fillColor(Color.argb(100, 200, 0, 0))
+
+                    new[i.key] = mMap.addPolygon(t)
+                } else {
+                    new[i.key] = old
+                }
+            }
+            customFields.map {
+                it.value.remove()
+            }
+            customFields = new
         })
 
         (map as SupportMapFragment).getMapAsync(this)
@@ -327,6 +352,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnCameraI
         return super.onOptionsItemSelected(item)
     }
 
+    @SuppressLint("MissingPermission")
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
         mMap.setMaxZoomPreference(21f)

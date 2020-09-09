@@ -1,7 +1,9 @@
 package com.puuuuh.ingressmap.viewmodel
 
 import android.content.Context
+import android.os.Build
 import android.os.Handler
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -12,6 +14,7 @@ import com.google.common.geometry.S2CellId
 import com.puuuuh.ingressmap.repository.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import java.util.*
 import kotlin.math.*
 
 data class CellData(val portals: Map<String, Portal>, val links: Map<String, Link>, val fields: Map<String, Field>)
@@ -60,8 +63,13 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
     private val _fields = MutableLiveData<Map<String, Field>>()
     val fields: LiveData<Map<String, Field>> = _fields
 
+    private val _customFields = MutableLiveData<Map<String, List<LatLng>>>()
+    val customFields: LiveData<Map<String, List<LatLng>>> = _customFields
+
     private val _status = MutableLiveData<Status>()
     val status: LiveData<Status> = _status
+
+    private val _customPointLinks = mutableMapOf<LatLng, MutableList<LatLng>>()
 
     private val _customLines = MutableLiveData<Set<PolylineOptions>>()
     val customLines: LiveData<Set<PolylineOptions>> = _customLines
@@ -193,18 +201,52 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
             _selectedPortal.value = value
         }
     }
+
     private fun addCustomPoint(point: LatLng) {
         val prev = this._selectedPoint.value
         if (prev == null) {
             this._selectedPoint.value = point
         } else {
             this._selectedPoint.value = null
-            if (prev != point) {
+            if (prev != point && _customPointLinks[prev]?.contains(point) != true) {
                 var prevLines = this._customLines.value
                 if (prevLines == null) {
                     prevLines = emptySet()
                 }
                 this._customLines.value = setOf(*(prevLines.toTypedArray()), PolylineOptions().add(prev).add(point))
+                findNewFields(prev, point)
+                if (_customPointLinks[prev] == null) {
+                    _customPointLinks[prev] = mutableListOf(point)
+                } else {
+                    _customPointLinks[prev]!!.add(point)
+                }
+
+                if (_customPointLinks[point] == null) {
+                    _customPointLinks[point] = mutableListOf(prev)
+                } else {
+                    _customPointLinks[point]!!.add(prev)
+                }
+            }
+        }
+    }
+
+    private fun addCustomField(points: List<LatLng>) {
+        var prev = _customFields.value
+        if (prev == null) {
+            _customFields.value = mapOf(UUID.randomUUID().toString() to points)
+            return
+        }
+        prev = prev + (UUID.randomUUID().toString() to points)
+        _customFields.value = prev
+    }
+
+    private fun findNewFields(p1: LatLng, p2: LatLng) {
+        val p1Links = _customPointLinks[p1]
+        val p2Links = _customPointLinks[p2]
+        if (p1Links != null && p2Links != null) {
+            val p3List = p1Links.intersect(p2Links)
+            p3List.map {
+                addCustomField(listOf(p1,p2,it))
             }
         }
     }
@@ -217,6 +259,15 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
         this._customLines.value = prevLines.filter {
             !(it.points[0] == line[0] && it.points[1] == line[1])
         }.toSet()
+        this._customPointLinks[line[0]]?.removeIf {
+            it == line[1]
+        }
+        this._customPointLinks[line[1]]?.removeIf {
+            it == line[0]
+        }
+        this._customFields.value = this._customFields.value?.filter {
+            !it.value.containsAll(line.toList())
+        }.orEmpty()
     }
 
     override fun onCellDataReceived(
