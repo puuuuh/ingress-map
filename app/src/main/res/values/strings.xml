@@ -1,13 +1,28 @@
 <resources>
     <string name="app_name">Ingress map</string>
     <string name="title_activity_login">Sign in</string>
-    <string name="prompt_email">Email</string>
-    <string name="prompt_password">Password</string>
-    <string name="action_sign_in">Sign in or register</string>
-    <string name="action_sign_in_short">Sign in</string>
-    <string name="welcome">"Welcome !"</string>
-    <string name="invalid_username">Not a valid username</string>
-    <string name="invalid_password">Password must be >5 characters</string>
-    <string name="login_failed">"Login failed"</string>
-    <string name="title_activity_portal_map">Map</string>
+    <string name="title_activity_main">Ingress map</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="nav_header_desc">Navigation header</string>
+
+    <string name="menu_map">Map</string>
+    <string name="menu_settings">Settings</string>
+    <!-- Preference Titles -->
+    <string name="visibility_header">Visibility</string>
+    <string name="permissions_header">Permissions</string>
+    <string name="drawing_header">Draw</string>
+
+    <!-- Drawing Preferences -->
+    <string name="draw_enable">Draw mode</string>
+
+    <!-- Permissions Preferences -->
+    <string name="my_location">Enable go to my location marker</string>
+
+    <!-- Sync Preferences -->
+    <string name="show_portals">Show portals</string>
+    <string name="show_links">Show links</string>
+    <string name="show_fields">Show fields</string>
+    <string name="show_cells">Show cells</string>
+
 </resources>

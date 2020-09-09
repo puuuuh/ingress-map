@@ -1,16 +1,16 @@
 package com.puuuuh.ingressmap.settings
 
-import android.app.Activity
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.preference.PreferenceManager
 import com.google.android.gms.maps.model.LatLng
 
 object Settings {
-    private const val APP_SETTINGS = "APP_SETTINGS"
     private const val SHOW_FIELDS = "SHOW_FIELDS"
     private const val SHOW_LINKS = "SHOW_LINKS"
+    private const val SHOW_CELLS = "SHOW_CELLS"
     private const val DRAW_MODE = "DRAW_MODE"
     private const val SHOW_PORTALS = "SHOW_PORTALS"
     private const val LAST_LAT = "LAST_LAT"
@@ -18,6 +18,7 @@ object Settings {
     private const val LAST_ZOOM = "LAST_ZOOM"
     private const val TOKEN = "TOKEN"
     private const val CSRFTOKEN = "CSRFTOKEN"
+    private const val MY_LOCATION = "MY_LOCATION"
     private const val API_VERSION = "API_VERSION"
     private var mSharedPref: SharedPreferences? = null
 
@@ -25,7 +26,7 @@ object Settings {
     val liveToken: LiveData<String> = _liveToken
 
     fun init(context: Context) {
-        mSharedPref = context.getSharedPreferences(APP_SETTINGS, Activity.MODE_PRIVATE);
+        mSharedPref = PreferenceManager.getDefaultSharedPreferences(context)
         _liveToken.value = this.token
 
         mSharedPref!!.registerOnSharedPreferenceChangeListener { _: SharedPreferences, s: String ->
@@ -57,6 +58,14 @@ object Settings {
         }
         set(value) {
             mSharedPref?.edit()?.putBoolean(SHOW_LINKS, value)?.apply()
+        }
+
+    var showCells: Boolean
+        get() {
+            return mSharedPref?.getBoolean(SHOW_CELLS, false) ?: false
+        }
+        set(value) {
+            mSharedPref?.edit()?.putBoolean(SHOW_CELLS, value)?.apply()
         }
 
     var drawMode: Boolean
@@ -113,6 +122,16 @@ object Settings {
         set(value) {
             mSharedPref?.edit()
                 ?.putString(CSRFTOKEN, value)
+                ?.apply()
+        }
+
+    var myLocation: Boolean
+        get() {
+            return mSharedPref?.getBoolean(MY_LOCATION, true)!!
+        }
+        set(value) {
+            mSharedPref?.edit()
+                ?.putBoolean(MY_LOCATION, value)
                 ?.apply()
         }
 }

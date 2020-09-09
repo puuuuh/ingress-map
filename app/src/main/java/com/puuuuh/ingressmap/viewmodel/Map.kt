@@ -1,9 +1,7 @@
 package com.puuuuh.ingressmap.viewmodel
 
 import android.content.Context
-import android.os.Build
 import android.os.Handler
-import androidx.annotation.RequiresApi
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -45,6 +43,7 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
     private var showPortal = false
     private var showLinks = false
     private var showFields = false
+    private var showCells = false
     private var drawMode = false
 
     // Current viewport
@@ -88,7 +87,9 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
 
         GlobalScope.launch {
             updateCellsInRegion(r, z)
-            cellsRepo.getCells(r, z, this@MapViewModel)
+            if (showCells) {
+                cellsRepo.getCells(r, z, this@MapViewModel)
+            }
             updateVisibleLinks()
             updateVisiblePortals()
             updateVisibleFields()
@@ -109,10 +110,14 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
         val new = if (!showLinks || zoom < 14) {
             mapOf()
         } else {
-            allLinks.filter { link ->  link.value.bounds.intersects(viewport) }
+            allLinks.filter { link -> link.value.bounds.intersects(viewport) }
         }
         if (new != _links.value)
             _links.postValue(new)
+    }
+
+    private fun updateVisibleS2Cells() {
+        cellsRepo.getCells(viewport, zoom, this@MapViewModel)
     }
 
     private fun LatLngBounds.intersects(viewport: LatLngBounds): Boolean {
@@ -123,8 +128,8 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
 
 
         if (viewport.contains(this.northeast) || viewport.contains(this.southwest) ||
-                viewport.contains(thisNorthWest) || viewport.contains(thisSouthEast) ||
-                this.contains(viewport.northeast) || this.contains(viewport.southwest) ||
+            viewport.contains(thisNorthWest) || viewport.contains(thisSouthEast) ||
+            this.contains(viewport.northeast) || this.contains(viewport.southwest) ||
                 this.contains(vpNorthWest) || this.contains(vpSouthEast)) {
             return true
         }
@@ -183,20 +188,30 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
             updateVisibleFields()
         }
     }
+
     fun setLinksVisible(value: Boolean) {
         if (showLinks != value) {
             showLinks = value
             updateVisibleLinks()
         }
     }
+
+    fun setS2CellsVisible(value: Boolean) {
+        if (showCells != value) {
+            showCells = value
+            updateVisibleS2Cells()
+        }
+    }
+
     fun setDrawMode(value: Boolean) {
         if (drawMode != value) {
             drawMode = value
         }
     }
+
     fun selectPortal(value: Portal?) {
         if (drawMode && value != null) {
-            addCustomPoint(LatLng(value.lat,value.lng))
+            addCustomPoint(LatLng(value.lat, value.lng))
         } else {
             _selectedPortal.value = value
         }
@@ -356,14 +371,13 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
 
     override fun onCellsReady(data: Map<S2CellId, PolylineOptions>) {
         synchronized(_cellLines) {
-            val new = mutableMapOf<S2CellId, PolylineOptions>()
-            for (i in data) {
-                if (new.containsKey(i.key).and(new.containsValue(i.value))) {
-                    continue
+            _cellLines.postValue(
+                if (showCells) {
+                    data
+                } else {
+                    mapOf()
                 }
-                new[i.key] = i.value
-            }
-            _cellLines.postValue(new)
+            )
         }
     }
 
