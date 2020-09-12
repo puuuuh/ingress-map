@@ -30,7 +30,7 @@ import com.puuuuh.ingressmap.viewmodel.ViewmodelFactory
 import kotlinx.android.synthetic.main.fragment_map.*
 import kotlinx.android.synthetic.main.fragment_map.view.*
 
-class MapFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
+class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
     GoogleMap.OnMarkerClickListener, GoogleMap.OnPolylineClickListener,
     DialogInterface.OnDismissListener {
     private val mapViewModel: MapViewModel by activityViewModels { ViewmodelFactory(this.requireContext()) }
@@ -39,7 +39,7 @@ class MapFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListen
     private var portals = mutableMapOf<String, Marker>()
     private var fields = mutableMapOf<String, Polygon>()
     private var links = mutableMapOf<String, Polyline>()
-    private var customLinks = mutableMapOf<PolylineOptions, Polyline>()
+    private var customLinks = mutableMapOf<String, Polyline>()
     private var customFields = mutableMapOf<String, Polygon>()
     private var selectedPoint: Marker? = null
 
@@ -51,10 +51,66 @@ class MapFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListen
         super.onCreateView(inflater, container, savedInstanceState)
         val view = inflater.inflate(R.layout.fragment_map, container, false)
 
-        mapViewModel.portals.observe(viewLifecycleOwner, androidx.lifecycle.Observer {
-            if (!this::mMap.isInitialized) {
-                return@Observer
+
+
+        // Start the autocomplete intent.
+        val call =
+            registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                when (result.resultCode) {
+                    Activity.RESULT_OK -> {
+                        val data = Autocomplete.getPlaceFromIntent(result.data!!)
+                        val pos = CameraPosition.Builder()
+                            .zoom(15f)
+                            .target(data.latLng)
+                            .build()
+                        mMap.animateCamera(CameraUpdateFactory.newCameraPosition(pos))
+                    }
+                }
             }
+        view.fab.setOnClickListener { _ ->
+            val intent =
+                context?.let {
+                    Autocomplete.IntentBuilder(
+                        AutocompleteActivityMode.FULLSCREEN,
+                        listOf(Place.Field.LAT_LNG)
+                    )
+                        .build(it)
+                }
+            call.launch(intent)
+        }
+
+        if (Settings.myLocation) {
+            registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+                if (it[Manifest.permission.ACCESS_FINE_LOCATION] != true) {
+                    Settings.myLocation = false
+                }
+            }.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))
+        }
+
+        val map = childFragmentManager.findFragmentById(R.id.map)
+        (map as SupportMapFragment).getMapAsync(this)
+        return view
+    }
+
+    override fun onMapReady(googleMap: GoogleMap) {
+        mMap = googleMap
+        mMap.setMaxZoomPreference(21f)
+        mMap.setOnMarkerClickListener(this)
+        mMap.setOnPolylineClickListener(this)
+        mMap.setMinZoomPreference(3f)
+        var zoom = Settings.lastZoom
+        if (zoom < 3) {
+            zoom = 3f
+        }
+        if (zoom > 21f) {
+            Settings.lastZoom = 21f
+        }
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(Settings.lastPosition, zoom))
+        mMap.setOnCameraIdleListener(this)
+        mMap.mapType = GoogleMap.MAP_TYPE_HYBRID
+        enableMyLocation()
+
+        mapViewModel.portals.observe(viewLifecycleOwner, androidx.lifecycle.Observer {
             val newPortals = mutableMapOf<String, Marker>()
             for (i in it) {
                 val old = portals.remove(i.key)
@@ -95,9 +151,6 @@ class MapFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListen
             portals = newPortals
         })
         mapViewModel.links.observe(viewLifecycleOwner, androidx.lifecycle.Observer { data ->
-            if (!this::mMap.isInitialized) {
-                return@Observer
-            }
             val newLinks = mutableMapOf<String, Polyline>()
             for (i in data) {
                 val old = links.remove(i.key)
@@ -135,9 +188,6 @@ class MapFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListen
             links = newLinks
         })
         mapViewModel.fields.observe(viewLifecycleOwner, androidx.lifecycle.Observer { data ->
-            if (!this::mMap.isInitialized) {
-                return@Observer
-            }
             val newFields = mutableMapOf<String, Polygon>()
             for (i in data) {
                 val old = fields.remove(i.key)
@@ -174,9 +224,6 @@ class MapFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListen
             fields = newFields
         })
         mapViewModel.cellLines.observe(viewLifecycleOwner, androidx.lifecycle.Observer { data ->
-            if (!this::mMap.isInitialized) {
-                return@Observer
-            }
             val newLines = hashMapOf<S2CellId, Polyline>()
             data.map {
                 var line = lines[it.key]
@@ -215,22 +262,22 @@ class MapFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListen
         })
 
         mapViewModel.customLines.observe(viewLifecycleOwner, androidx.lifecycle.Observer { data ->
-            val newLinks = mutableMapOf<PolylineOptions, Polyline>()
+            val newLinks = mutableMapOf<String, Polyline>()
             for (i in data) {
-                val old = customLinks.remove(i)
+                val old = customLinks.remove(i.key)
                 val color = Color.RED
 
                 if (old == null) {
-                    val m = PolylineOptions()
-                        .add(i.points[0], i.points[1])
+                    val m = i.value
                         .width(4f)
                         .zIndex(4f)
                         .color(color)
                         .clickable(true)
-
-                    newLinks[i] = mMap.addPolyline(m)
+                    val line = mMap.addPolyline(m)
+                    line.tag = i.key
+                    newLinks[i.key] = line
                 } else {
-                    newLinks[i] = old
+                    newLinks[i.key] = old
                 }
             }
             customLinks.map {
@@ -288,70 +335,6 @@ class MapFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListen
             }
             customFields = new
         })
-
-        // Start the autocomplete intent.
-        val call =
-            registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                when (result.resultCode) {
-                    Activity.RESULT_OK -> {
-                        val data = Autocomplete.getPlaceFromIntent(result.data!!)
-                        val pos = CameraPosition.Builder()
-                            .zoom(15f)
-                            .target(data.latLng)
-                            .build()
-                        mMap.animateCamera(CameraUpdateFactory.newCameraPosition(pos))
-                    }
-                }
-            }
-        view.fab.setOnClickListener { _ ->
-            val intent =
-                context?.let {
-                    Autocomplete.IntentBuilder(
-                        AutocompleteActivityMode.FULLSCREEN,
-                        listOf(Place.Field.LAT_LNG)
-                    )
-                        .build(it)
-                }
-            call.launch(intent)
-        }
-
-        if (Settings.myLocation) {
-            registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
-                if (it[Manifest.permission.ACCESS_FINE_LOCATION] != true) {
-                    Settings.myLocation = false
-                }
-            }.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))
-        }
-
-
-        mapViewModel.setFieldsVisible(Settings.showFields)
-        mapViewModel.setLinksVisible(Settings.showLinks)
-        mapViewModel.setPortalsVisible(Settings.showPortals)
-        mapViewModel.setDrawMode(Settings.drawMode)
-        mapViewModel.setS2CellsVisible(Settings.showCells)
-
-        val map = childFragmentManager.findFragmentById(R.id.map)
-        (map as SupportMapFragment).getMapAsync(this)
-        return view
-    }
-
-    override fun onMapReady(googleMap: GoogleMap) {
-        mMap = googleMap
-        mMap.setMaxZoomPreference(21f)
-        mMap.setOnMarkerClickListener(this)
-        mMap.setOnPolylineClickListener(this)
-        mMap.setMinZoomPreference(3f)
-        var zoom = Settings.lastZoom
-        if (zoom < 3) {
-            zoom = 3f
-        }
-        if (zoom > 21f) {
-            Settings.lastZoom = 21f
-        }
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(Settings.lastPosition, zoom))
-        mMap.setOnCameraIdleListener(this)
-        mMap.mapType = GoogleMap.MAP_TYPE_HYBRID
-        enableMyLocation()
     }
 
     private fun enableMyLocation() {
@@ -388,7 +371,7 @@ class MapFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListen
     }
 
     override fun onPolylineClick(p0: Polyline) {
-        mapViewModel.removeCustomLine(p0.points.toTypedArray())
+        mapViewModel.removeCustomLine(p0.tag as String)
 
         return
     }

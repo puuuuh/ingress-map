@@ -10,9 +10,11 @@ import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.common.geometry.S2CellId
 import com.puuuuh.ingressmap.repository.*
+import com.puuuuh.ingressmap.settings.Settings
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.util.*
+import kotlin.collections.HashMap
 import kotlin.math.*
 
 data class CellData(val portals: Map<String, Portal>, val links: Map<String, Link>, val fields: Map<String, Field>)
@@ -31,6 +33,7 @@ private fun getXYTile(lat : Double, lng: Double, zoom : Int) : Pair<Int, Int> {
 
 class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnCellsReadyCallback {
     private val ingressRepo = IngressApiRepo()
+    private val customPointRepo = CustomPointsRepo()
     private val cellsRepo = S2CellsRepo()
     private val handler = Handler(context.mainLooper)
 
@@ -38,13 +41,6 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
     private val allPortals = mutableMapOf<String, Portal>()
     private val allLinks = mutableMapOf<String, Link>()
     private val allFields = mutableMapOf<String, Field>()
-
-    // Visibility
-    private var showPortal = false
-    private var showLinks = false
-    private var showFields = false
-    private var showCells = false
-    private var drawMode = false
 
     // Current viewport
     private var viewport = LatLngBounds(LatLng(0.0, 0.0), LatLng(0.0, 0.0))
@@ -70,8 +66,8 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
 
     private val _customPointLinks = mutableMapOf<LatLng, MutableList<LatLng>>()
 
-    private val _customLines = MutableLiveData<Set<PolylineOptions>>()
-    val customLines: LiveData<Set<PolylineOptions>> = _customLines
+    private val _customLines = MutableLiveData<Map<String, PolylineOptions>>()
+    val customLines: LiveData<Map<String, PolylineOptions>> = _customLines
 
     private val _selectedPoint = MutableLiveData<LatLng?>()
     val selectedPoint: LiveData<LatLng?> = _selectedPoint
@@ -81,13 +77,23 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
 
     private val _cellCache = mutableMapOf<String, CellData>()
 
+    init {
+        _customLines.value = emptyMap()
+        val links = customPointRepo.getAll()
+        links.observeForever { list ->
+            list.map {
+                addCustomLink(it.id, Pair(it.points[0].LatLng, it.points[1].LatLng))
+            }
+        }
+    }
+
     fun updateRegion(r: LatLngBounds, z: Int) {
         viewport = r
         zoom = z
 
         GlobalScope.launch {
             updateCellsInRegion(r, z)
-            if (showCells) {
+            if (Settings.showCells) {
                 cellsRepo.getCells(r, z, this@MapViewModel)
             }
             updateVisibleLinks()
@@ -97,7 +103,7 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
     }
 
     private fun updateVisibleFields() {
-        val new = if (!showFields || zoom < 13) {
+        val new = if (!Settings.showFields || zoom < 13) {
             mapOf()
         } else {
             allFields.filter { field -> field.value.bounds.intersects(viewport) }
@@ -107,17 +113,13 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
     }
 
     private fun updateVisibleLinks() {
-        val new = if (!showLinks || zoom < 14) {
+        val new = if (!Settings.showLinks || zoom < 14) {
             mapOf()
         } else {
             allLinks.filter { link -> link.value.bounds.intersects(viewport) }
         }
         if (new != _links.value)
             _links.postValue(new)
-    }
-
-    private fun updateVisibleS2Cells() {
-        cellsRepo.getCells(viewport, zoom, this@MapViewModel)
     }
 
     private fun LatLngBounds.intersects(viewport: LatLngBounds): Boolean {
@@ -167,7 +169,7 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
     }
 
     private fun updateVisiblePortals() {
-        val new = if (!showPortal || zoom < 13.5) {
+        val new = if (!Settings.showPortals || zoom < 13.5) {
             mapOf()
         } else {
             allPortals.filter { viewport.contains(LatLng(it.value.lat, it.value.lng)) }
@@ -176,41 +178,8 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
             _portals.postValue(new)
     }
 
-    fun setPortalsVisible(value: Boolean) {
-        if (showPortal != value) {
-            showPortal = value
-            updateVisiblePortals()
-        }
-    }
-    fun setFieldsVisible(value: Boolean) {
-        if (showFields != value) {
-            showFields = value
-            updateVisibleFields()
-        }
-    }
-
-    fun setLinksVisible(value: Boolean) {
-        if (showLinks != value) {
-            showLinks = value
-            updateVisibleLinks()
-        }
-    }
-
-    fun setS2CellsVisible(value: Boolean) {
-        if (showCells != value) {
-            showCells = value
-            updateVisibleS2Cells()
-        }
-    }
-
-    fun setDrawMode(value: Boolean) {
-        if (drawMode != value) {
-            drawMode = value
-        }
-    }
-
     fun selectPortal(value: Portal?) {
-        if (drawMode && value != null) {
+        if (Settings.drawMode && value != null) {
             addCustomPoint(LatLng(value.lat, value.lng))
         } else {
             _selectedPortal.value = value
@@ -223,36 +192,48 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
             this._selectedPoint.value = point
         } else {
             this._selectedPoint.value = null
-            if (prev != point && _customPointLinks[prev]?.contains(point) != true) {
-                var prevLines = this._customLines.value
-                if (prevLines == null) {
-                    prevLines = emptySet()
-                }
-                this._customLines.value = setOf(*(prevLines.toTypedArray()), PolylineOptions().add(prev).add(point))
-                findNewFields(prev, point)
-                if (_customPointLinks[prev] == null) {
-                    _customPointLinks[prev] = mutableListOf(point)
-                } else {
-                    _customPointLinks[prev]!!.add(point)
-                }
-
-                if (_customPointLinks[point] == null) {
-                    _customPointLinks[point] = mutableListOf(prev)
-                } else {
-                    _customPointLinks[point]!!.add(prev)
-                }
+            val link = addCustomLink(UUID.randomUUID().toString(), Pair(prev, point))
+            if (link != null) {
+                customPointRepo.add(link)
             }
         }
     }
 
-    private fun addCustomField(points: List<LatLng>) {
-        var prev = _customFields.value
-        if (prev == null) {
-            _customFields.value = mapOf(UUID.randomUUID().toString() to points)
-            return
+    private fun addCustomLink(id: String, points: Pair<LatLng, LatLng>): Link? {
+        if (points.first == points.second || _customPointLinks[points.first]?.contains(points.second) == true) {
+            return null
         }
-        prev = prev + (UUID.randomUUID().toString() to points)
-        _customFields.value = prev
+        var prevLines = this._customLines.value
+        if (prevLines == null) {
+            prevLines = emptyMap()
+        }
+        val poly = PolylineOptions().add(points.first).add(points.second)
+        val newLines = HashMap(prevLines)
+        newLines[id] = poly
+        this._customLines.value = newLines
+        findNewFields(points.first, points.second)
+        if (_customPointLinks[points.first] == null) {
+            _customPointLinks[points.first] = mutableListOf(points.second)
+        } else {
+            _customPointLinks[points.first]!!.add(points.second)
+        }
+        if (_customPointLinks[points.second] == null) {
+            _customPointLinks[points.second] = mutableListOf(points.first)
+        } else {
+            _customPointLinks[points.second]!!.add(points.first)
+        }
+        return Link(id, "C", (poly.points.map {
+            Point(LatLng(it.latitude, it.longitude))
+        }).toTypedArray())
+    }
+
+    private fun addCustomField(points: List<LatLng>) {
+        val prev = _customFields.value
+        _customFields.value = (if (prev == null) {
+            mapOf(UUID.randomUUID().toString() to points)
+        } else {
+            prev + (UUID.randomUUID().toString() to points)
+        })
     }
 
     private fun findNewFields(p1: LatLng, p2: LatLng) {
@@ -261,27 +242,29 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
         if (p1Links != null && p2Links != null) {
             val p3List = p1Links.intersect(p2Links)
             p3List.map {
-                addCustomField(listOf(p1,p2,it))
+                addCustomField(listOf(p1, p2, it))
             }
         }
     }
 
-    fun removeCustomLine(line: Array<LatLng>) {
+    fun removeCustomLine(id: String) {
+        val l = this._customLines.value?.get(id) ?: return
+        customPointRepo.delete(id)
         var prevLines = this._customLines.value
         if (prevLines == null) {
-            prevLines = emptySet()
+            prevLines = emptyMap()
         }
         this._customLines.value = prevLines.filter {
-            !(it.points[0] == line[0] && it.points[1] == line[1])
-        }.toSet()
-        this._customPointLinks[line[0]]?.removeIf {
-            it == line[1]
+            it.key != id
         }
-        this._customPointLinks[line[1]]?.removeIf {
-            it == line[0]
+        this._customPointLinks[l.points[0]]?.removeIf {
+            it == l.points[1]
+        }
+        this._customPointLinks[l.points[1]]?.removeIf {
+            it == l.points[0]
         }
         this._customFields.value = this._customFields.value?.filter {
-            !it.value.containsAll(line.toList())
+            !it.value.containsAll(l.points)
         }.orEmpty()
     }
 
@@ -372,7 +355,7 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
     override fun onCellsReady(data: Map<S2CellId, PolylineOptions>) {
         synchronized(_cellLines) {
             _cellLines.postValue(
-                if (showCells) {
+                if (Settings.showCells) {
                     data
                 } else {
                     mapOf()

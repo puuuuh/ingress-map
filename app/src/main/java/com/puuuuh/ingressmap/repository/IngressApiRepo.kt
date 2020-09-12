@@ -10,9 +10,12 @@ import java.io.IOException
 import java.net.URL
 
 interface OnDataReadyCallback {
-    fun onCellDataReceived(cellId: String, portal: Map<String, Portal>,
-                           links: Map<String, Link>,
-                           fields: Map<String, Field>)
+    fun onCellDataReceived(
+        cellId: String, portals: Map<String, Portal>,
+        links: Map<String, Link>,
+        fields: Map<String, Field>
+    )
+
     fun onRequestStart()
     fun onRequestEnd()
 }
@@ -45,68 +48,43 @@ data class GetPortalDataResponse (
     val result: ArrayList<Any>
 )
 
-data class Link(val raw: ArrayList<Any>) {
-    data class Point(val guid: String, val LatLng: LatLng)
-
-    var team = ""
-    var points = arrayOf<Point>()
-    var bounds = LatLngBounds(LatLng(0.0, 0.0), LatLng(0.0, 0.0));
-
-    init {
-        team = raw[1] as String
-        points = arrayOf(
-            Point(raw[2] as String, LatLng(
-                raw[3] as Double / 1000000,
-                raw[4] as Double / 1000000
-            )
-            ),
-            Point(raw[5] as String, LatLng(
-                raw[6] as Double / 1000000,
-                raw[7] as Double / 1000000
-            )
-            )
+data class Point(val LatLng: LatLng) {
+    constructor(raw: ArrayList<Any>) : this(
+        LatLng(
+            raw[1] as Double / 1000000,
+            raw[2] as Double / 1000000
         )
-        bounds = LatLngBounds.builder()
-            .include(points[0].LatLng)
-            .include(points[1].LatLng)
-            .build()
-
-    }
+    )
 }
 
-data class Field(val raw: ArrayList<Any>) {
-    data class Point(val guid: String, val LatLng: LatLng)
+data class Link(val id: String, val team: String, val points: Array<Point>) {
+    var bounds = LatLngBounds.builder()
+        .include(points[0].LatLng)
+        .include(points[1].LatLng)
+        .build()
 
-    var team = ""
-    var points = arrayOf<Point>()
-    var bounds = LatLngBounds(LatLng(0.0, 0.0), LatLng(0.0, 0.0));
-
-    init {
-        team = raw[1] as String
-        val pointsRaw = raw[2] as ArrayList<ArrayList<Any>>
-        points = arrayOf(
-            Point(pointsRaw[0][0] as String, LatLng(
-                pointsRaw[0][1] as Double / 1000000,
-                pointsRaw[0][2] as Double / 1000000
-            )
-            ),
-            Point(pointsRaw[1][0] as String, LatLng(
-                pointsRaw[1][1] as Double / 1000000,
-                pointsRaw[1][2] as Double / 1000000
-            )
-            ),
-            Point(pointsRaw[2][0] as String, LatLng(
-                pointsRaw[2][1] as Double / 1000000,
-                pointsRaw[2][2] as Double / 1000000
-            )
-            )
+    constructor(id: String, raw: ArrayList<Any>) : this(
+        id, raw[1] as String, arrayOf(
+            Point(raw.slice(IntRange(2, 4)) as ArrayList<Any>),
+            Point(raw.slice(IntRange(5, 7)) as ArrayList<Any>)
         )
-        bounds = LatLngBounds.builder()
-            .include(points[0].LatLng)
-            .include(points[1].LatLng)
-            .include(points[2].LatLng)
-            .build()
-    }
+    )
+}
+
+data class Field(val id: String, val team: String, val points: Array<Point>) {
+    val bounds: LatLngBounds = LatLngBounds.builder()
+        .include(points[0].LatLng)
+        .include(points[1].LatLng)
+        .include(points[2].LatLng)
+        .build()
+
+    constructor(id: String, raw: ArrayList<Any>) : this(
+        id, raw[1] as String, arrayOf(
+            Point((raw[2] as ArrayList<ArrayList<Any>>)[0]),
+            Point((raw[2] as ArrayList<ArrayList<Any>>)[1]),
+            Point((raw[2] as ArrayList<ArrayList<Any>>)[2])
+        )
+    )
 }
 
 data class Mod(val raw: ArrayList<Any>) {
@@ -177,7 +155,7 @@ data class Portal(val guid: String, val raw: ArrayList<Any>) {
 }
 
 
-class IngressApiRepo() {
+class IngressApiRepo {
     var okHttpClient: OkHttpClient = OkHttpClient()
 
     init {
@@ -234,14 +212,14 @@ class IngressApiRepo() {
 
         val payload = g.toJson(GetEntitiesPayload(tiles))
 
-        apiCall("getEntities", payload, object: Callback {
+        apiCall("getEntities", payload, object : Callback {
             override fun onFailure(call: Call?, e: IOException?) {
-                getTilesInfo(tiles, callback, retry+1)
+                getTilesInfo(tiles, callback, retry + 1)
                 callback.onRequestEnd()
             }
 
             override fun onResponse(call: Call?, response: Response?) {
-                if (response!!.code() == 400 && tiles.size > 2){
+                if (response!!.code() == 400 && tiles.size > 2) {
                     tiles.withIndex()
                         .groupBy { it.index / (tiles.size / 2) }
                         .map {
@@ -250,7 +228,7 @@ class IngressApiRepo() {
                     callback.onRequestEnd()
                     return
                 }
-                if (response.code() != 200){
+                if (response.code() != 200) {
                     callback.onRequestEnd()
                     return
                 }
@@ -274,17 +252,17 @@ class IngressApiRepo() {
                                     portals[e[0] as String] = Portal(e[0] as String, entityData)
                                 }
                                 "e" -> {
-                                    links[e[0] as String] = Link(entityData)
+                                    links[e[0] as String] = Link(e[0] as String, entityData)
                                 }
                                 "r" -> {
-                                    fields[e[0] as String] = Field(entityData)
+                                    fields[e[0] as String] = Field(e[0] as String, entityData)
                                 }
                             }
                         }
                         callback.onCellDataReceived(es.key, portals, links, fields)
                     }
                     if (next.isNotEmpty()) {
-                        getTilesInfo(next, callback, retry+1)
+                        getTilesInfo(next, callback, retry + 1)
                     }
                 } catch (e: Exception) {
                     print(e.message)
