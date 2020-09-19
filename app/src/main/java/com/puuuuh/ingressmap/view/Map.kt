@@ -36,7 +36,7 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
     private val mapViewModel: MapViewModel by activityViewModels { ViewmodelFactory(this.requireContext()) }
     private lateinit var mMap: GoogleMap
     private var lines = hashMapOf<S2CellId, Polyline>()
-    private var portals = mutableMapOf<String, Marker>()
+    private var portals = mutableMapOf<String, Pair<Marker, Circle?>>()
     private var fields = mutableMapOf<String, Polygon>()
     private var links = mutableMapOf<String, Polyline>()
     private var customLinks = mutableMapOf<String, Polyline>()
@@ -111,7 +111,7 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
         enableMyLocation()
 
         mapViewModel.portals.observe(viewLifecycleOwner, androidx.lifecycle.Observer {
-            val newPortals = mutableMapOf<String, Marker>()
+            val newPortals = mutableMapOf<String, Pair<Marker, Circle?>>()
             for (i in it) {
                 val old = portals.remove(i.key)
                 val iconRes = when (i.value.team) {
@@ -133,20 +133,47 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
                         .icon(BitmapDescriptorFactory.fromResource(iconRes))
                         .zIndex(2f)
                         .anchor(0.5f, 0.5f)
-                    newPortals[i.key] = mMap.addMarker(m)
+                    newPortals[i.key] = Pair(
+                        mMap.addMarker(m),
+                        if (mMap.cameraPosition.zoom > 16) {
+                            val oreol = CircleOptions()
+                                .center(pos)
+                                .radius(20.0)
+                                .fillColor(0x77303030)
+                                .strokeWidth(0.0F)
+                            mMap.addCircle(oreol)
+                        } else {
+                            null
+                        }
+                    )
+
                 } else {
-                    if (old.position != pos) {
-                        old.position = pos
+                    if (old.first.position != pos) {
+                        old.second?.center = pos
+                        old.first.position = pos
                     }
-                    if ((old.tag as Portal).team != i.value.team) {
-                        old.setIcon(BitmapDescriptorFactory.fromResource(iconRes))
+                    if ((old.first.tag as Portal).team != i.value.team) {
+                        old.first.setIcon(BitmapDescriptorFactory.fromResource(iconRes))
                     }
-                    newPortals[i.key] = old
+                    if (mMap.cameraPosition.zoom > 16 && old.second == null) {
+                        val oreol = CircleOptions()
+                            .center(pos)
+                            .radius(20.0)
+                            .fillColor(0x77303030)
+                            .strokeWidth(0.0F)
+                        newPortals[i.key] = Pair(old.first, mMap.addCircle(oreol))
+                    } else if (mMap.cameraPosition.zoom <= 16 && old.second != null) {
+                        old.second!!.remove()
+                        newPortals[i.key] = Pair(old.first, null)
+                    } else {
+                        newPortals[i.key] = old
+                    }
                 }
-                newPortals[i.key]!!.tag = i.value
+                newPortals[i.key]!!.first.tag = i.value
             }
             for (l in portals) {
-                l.value.remove()
+                l.value.first.remove()
+                l.value.second?.remove()
             }
             portals = newPortals
         })
