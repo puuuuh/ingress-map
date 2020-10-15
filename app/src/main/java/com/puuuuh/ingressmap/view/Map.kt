@@ -31,8 +31,7 @@ import kotlinx.android.synthetic.main.fragment_map.*
 import kotlinx.android.synthetic.main.fragment_map.view.*
 
 class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
-    GoogleMap.OnMarkerClickListener, GoogleMap.OnPolylineClickListener,
-    DialogInterface.OnDismissListener {
+    GoogleMap.OnMarkerClickListener, GoogleMap.OnPolylineClickListener {
     private val mapViewModel: MapViewModel by activityViewModels { ViewmodelFactory(this.requireContext()) }
     private lateinit var mMap: GoogleMap
     private var lines = hashMapOf<S2CellId, Polyline>()
@@ -50,8 +49,6 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
     ): View? {
         super.onCreateView(inflater, container, savedInstanceState)
         val view = inflater.inflate(R.layout.fragment_map, container, false)
-
-
 
         // Start the autocomplete intent.
         val call =
@@ -320,13 +317,7 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
                     val fm = childFragmentManager
                     val dlg = PortalInfo.newInstance(data)
                     dlg.show(fm, "fragment_alert")
-                    fm.executePendingTransactions()
-                    val dialog = dlg.dialog
-                    if (dialog != null) {
-                        dialog.setOnDismissListener(this)
-                    } else {
-                        mapViewModel.selectPortal(null)
-                    }
+                    mapViewModel.selectPortal(null)
                 }
             })
 
@@ -399,13 +390,6 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
 
     override fun onPolylineClick(p0: Polyline) {
         mapViewModel.removeCustomLine(p0.tag as String)
-
         return
     }
-
-    override fun onDismiss(dialog: DialogInterface?) {
-        mapViewModel.selectPortal(null)
-    }
-
-
 }
