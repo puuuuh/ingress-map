@@ -2,7 +2,6 @@ package com.puuuuh.ingressmap.view
 
 import android.Manifest
 import android.app.Activity
-import android.content.DialogInterface
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Bundle

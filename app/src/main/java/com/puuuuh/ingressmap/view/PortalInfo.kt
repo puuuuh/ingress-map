@@ -62,12 +62,21 @@ class PortalInfo : DialogFragment() {
         val size = Point()
         val display: Display = window?.windowManager?.defaultDisplay!!
         display.getSize(size)
-        window.setLayout((size.x * 0.80).toInt(), (size.y * 0.80).toInt())
+        window.setLayout((size.x * 0.90).toInt(), (size.y * 0.90).toInt())
         window.setGravity(Gravity.CENTER)
+
+        val s =
+            if (display.rotation == Surface.ROTATION_90 || display.rotation == Surface.ROTATION_270) {
+                size.y
+            } else {
+                size.x
+            }
+        imageView.layoutParams.height = (s * 0.70).toInt()
+        imageView.layoutParams.width = (s * 0.70).toInt()
     }
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
         viewModel = ViewModelProvider(
             this,
             ViewmodelFactory(requireContext())
