@@ -25,4 +25,12 @@
     <string name="show_fields">Show fields</string>
     <string name="show_cells">Show cells</string>
 
+    <string-array name="map_providers">
+        <item>Google map</item>
+        <item>OpenStreetMap</item>
+    </string-array>
+    <string-array name="map_providers_values">
+        <item />
+        <item>osm</item>
+    </string-array>
 </resources>

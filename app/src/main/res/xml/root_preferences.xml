@@ -30,4 +30,14 @@
             app:title="@string/my_location" />
     </PreferenceCategory>
 
+    <PreferenceCategory app:title="Map">
+        <ListPreference
+            app:entries="@array/map_providers"
+            app:entryValues="@array/map_providers_values"
+            app:key="MAP_PROVIDER"
+            app:title="Map provider">
+
+        </ListPreference>
+    </PreferenceCategory>
+
 </PreferenceScreen>

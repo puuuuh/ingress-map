@@ -1,7 +1,6 @@
 package com.puuuuh.ingressmap.view
 
 import android.Manifest
-import android.app.Activity
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Bundle
@@ -17,9 +16,6 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
-import com.google.android.libraries.places.api.model.Place
-import com.google.android.libraries.places.widget.Autocomplete
-import com.google.android.libraries.places.widget.model.AutocompleteActivityMode
 import com.google.common.geometry.S2CellId
 import com.puuuuh.ingressmap.R
 import com.puuuuh.ingressmap.repository.Portal
@@ -27,7 +23,6 @@ import com.puuuuh.ingressmap.settings.Settings
 import com.puuuuh.ingressmap.viewmodel.MapViewModel
 import com.puuuuh.ingressmap.viewmodel.ViewmodelFactory
 import kotlinx.android.synthetic.main.fragment_map.*
-import kotlinx.android.synthetic.main.fragment_map.view.*
 
 class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
     GoogleMap.OnMarkerClickListener, GoogleMap.OnPolylineClickListener {
@@ -48,32 +43,6 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
     ): View? {
         super.onCreateView(inflater, container, savedInstanceState)
         val view = inflater.inflate(R.layout.fragment_map, container, false)
-
-        // Start the autocomplete intent.
-        val call =
-            registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                when (result.resultCode) {
-                    Activity.RESULT_OK -> {
-                        val data = Autocomplete.getPlaceFromIntent(result.data!!)
-                        val pos = CameraPosition.Builder()
-                            .zoom(15f)
-                            .target(data.latLng)
-                            .build()
-                        mMap.animateCamera(CameraUpdateFactory.newCameraPosition(pos))
-                    }
-                }
-            }
-        view.fab.setOnClickListener { _ ->
-            val intent =
-                context?.let {
-                    Autocomplete.IntentBuilder(
-                        AutocompleteActivityMode.FULLSCREEN,
-                        listOf(Place.Field.LAT_LNG)
-                    )
-                        .build(it)
-                }
-            call.launch(intent)
-        }
 
         if (Settings.myLocation) {
             registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
@@ -101,10 +70,13 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
         if (zoom > 21f) {
             Settings.lastZoom = 21f
         }
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(Settings.lastPosition, zoom))
         mMap.setOnCameraIdleListener(this)
         mMap.mapType = GoogleMap.MAP_TYPE_HYBRID
         enableMyLocation()
+
+        mapViewModel.targetPosition.observe(viewLifecycleOwner, androidx.lifecycle.Observer {
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(it, 17f))
+        })
 
         mapViewModel.portals.observe(viewLifecycleOwner, androidx.lifecycle.Observer {
             val newPortals = mutableMapOf<String, Pair<Marker, Circle?>>()
@@ -309,17 +281,6 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
             customLinks = newLinks
         })
 
-        mapViewModel.selectedPortal.observe(
-            viewLifecycleOwner,
-            androidx.lifecycle.Observer { data ->
-                if (data != null) {
-                    val fm = childFragmentManager
-                    val dlg = PortalInfo.newInstance(data)
-                    dlg.show(fm, "fragment_alert")
-                    mapViewModel.selectPortal(null)
-                }
-            })
-
         mapViewModel.selectedPoint.observe(viewLifecycleOwner, androidx.lifecycle.Observer { data ->
             selectedPoint?.remove()
             if (data != null) {
@@ -369,9 +330,8 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
     }
 
     override fun onCameraIdle() {
-        Settings.lastPosition = mMap.cameraPosition.target
-        Settings.lastZoom = mMap.cameraPosition.zoom
-        mapViewModel.updateRegion(
+        mapViewModel.updatePosition(
+            mMap.cameraPosition.target,
             mMap.projection.visibleRegion.latLngBounds,
             mMap.cameraPosition.zoom.toInt()
         )
@@ -381,7 +341,6 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
         if (p0?.tag is Portal) {
             mapViewModel.selectPortal(p0.tag as Portal)
             return true
-
         }
 
         return true

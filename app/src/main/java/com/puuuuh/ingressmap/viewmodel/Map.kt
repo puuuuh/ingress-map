@@ -46,6 +46,9 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
     private var viewport = LatLngBounds(LatLng(0.0, 0.0), LatLng(0.0, 0.0))
     private var zoom = 21
 
+    private val _targetPosition = MutableLiveData<LatLng>()
+    val targetPosition: LiveData<LatLng> = _targetPosition
+
     private val _portals = MutableLiveData<Map<String, Portal>>()
     val portals: LiveData<Map<String, Portal>> = _portals
 
@@ -72,13 +75,14 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
     private val _selectedPoint = MutableLiveData<LatLng?>()
     val selectedPoint: LiveData<LatLng?> = _selectedPoint
 
-    private val _selectedPortal = MutableLiveData<Portal>()
+    private val _selectedPortal = MutableLiveData<Portal?>()
     val selectedPortal: LiveData<Portal?> = _selectedPortal
 
     private val _cellCache = mutableMapOf<String, CellData>()
 
     init {
         _customLines.value = emptyMap()
+        _targetPosition.value = Settings.lastPosition
         val links = customPointRepo.getAll()
         links.observeForever { list ->
             list.map {
@@ -87,7 +91,10 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
         }
     }
 
-    fun updateRegion(r: LatLngBounds, z: Int) {
+    fun updatePosition(pos: LatLng, r: LatLngBounds, z: Int) {
+        Settings.lastPosition = pos
+        Settings.lastZoom = z.toFloat()
+
         viewport = r
         zoom = z
 
@@ -95,11 +102,17 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
             updateCellsInRegion(r, z)
             if (Settings.showCells) {
                 cellsRepo.getCells(r, z, this@MapViewModel)
+            } else if (cellLines.value?.isNotEmpty() != false) {
+                _cellLines.postValue(emptyMap())
             }
             updateVisibleLinks()
             updateVisiblePortals()
             updateVisibleFields()
         }
+    }
+
+    fun moveCamera(r: LatLng) {
+        _targetPosition.postValue(r)
     }
 
     private fun updateVisibleFields() {
@@ -365,7 +378,6 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
     }
 
     private fun updateCellsInRegion(region: LatLngBounds, zoom: Int) {
-
         val targetZoom = if (zoom < 13) zoom else 21
         val zoomToLevel = arrayOf(8,8,8,8,7,7,7,6,6,5,4,4,3,2,2,1,1)
         val level = if(targetZoom >= zoomToLevel.size) { 0 } else { zoomToLevel[targetZoom] }
