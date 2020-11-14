@@ -34,6 +34,7 @@ private fun getXYTile(lat : Double, lng: Double, zoom : Int) : Pair<Int, Int> {
 class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnCellsReadyCallback {
     private val ingressRepo = IngressApiRepo()
     private val customPointRepo = CustomPointsRepo()
+    private val portalsRepo = PortalsRepo()
     private val cellsRepo = S2CellsRepo()
     private val handler = Handler(context.mainLooper)
 
@@ -291,11 +292,15 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
         var updates = 0
         if (cachedVersion != null) {
             val removedPortals = cachedVersion.portals.keys.minus(portals.keys)
-            removedPortals.map { allPortals.remove(it) }
+            removedPortals.map {
+                portalsRepo.delete(it)
+                allPortals.remove(it)
+            }
             updates += removedPortals.size
             for (p in portals) {
                 val old = allPortals[p.key]
                 if (old != p.value) {
+                    portalsRepo.add(PortalDto(p.key, p.value.name, p.value.lat, p.value.lng))
                     allPortals[p.key] = p.value
                     updates++
                 }
@@ -326,6 +331,7 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
             for (p in portals) {
                 val old = allPortals[p.key]
                 if (old != p.value) {
+                    portalsRepo.add(PortalDto(p.key, p.value.name, p.value.lat, p.value.lng))
                     allPortals[p.key] = p.value
                     updates++
                 }

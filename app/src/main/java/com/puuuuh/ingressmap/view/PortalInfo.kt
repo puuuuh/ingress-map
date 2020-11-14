@@ -62,7 +62,7 @@ class PortalInfo : DialogFragment() {
         val size = Point()
         val display: Display = window?.windowManager?.defaultDisplay!!
         display.getSize(size)
-        window.setLayout((size.x * 0.90).toInt(), (size.y * 0.90).toInt())
+        window.setLayout((size.x * 0.85).toInt(), (size.y * 0.85).toInt())
         window.setGravity(Gravity.CENTER)
 
         val s =
@@ -91,7 +91,9 @@ class PortalInfo : DialogFragment() {
         })
 
         viewModel.pic.observe(viewLifecycleOwner, Observer {
-            Picasso.get().load(it).into(imageView)
+            if (it.isNotEmpty()) {
+                Picasso.get().load(it).into(imageView)
+            }
         })
 
         viewModel.name.observe(viewLifecycleOwner, Observer {

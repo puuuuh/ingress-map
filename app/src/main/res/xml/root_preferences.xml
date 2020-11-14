@@ -35,6 +35,7 @@
             app:entries="@array/map_providers"
             app:entryValues="@array/map_providers_values"
             app:key="MAP_PROVIDER"
+            app:defaultValue=""
             app:title="Map provider">
 
         </ListPreference>

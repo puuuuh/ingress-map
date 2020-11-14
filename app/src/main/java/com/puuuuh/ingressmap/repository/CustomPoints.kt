@@ -9,6 +9,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
 
+
 @Entity
 data class CustomLink(
     @PrimaryKey val id: String,
@@ -24,14 +25,14 @@ interface LinksDao {
     fun getAll(): LiveData<List<CustomLink>>
 
     @Insert
-    fun insertAll(vararg users: CustomLink)
+    fun insertAll(vararg links: CustomLink)
 
     @Query("DELETE FROM customlink WHERE id = :id")
     fun delete(id: String)
 }
 
 @Database(entities = [CustomLink::class], version = 1)
-abstract class AppDatabase : RoomDatabase() {
+abstract class CustomLinksDatabase : RoomDatabase() {
     abstract fun linksDao(): LinksDao
 }
 
@@ -39,7 +40,7 @@ class CustomPointsRepo {
     companion object {
         val db = Room.databaseBuilder(
             MainApplication.applicationContext(),
-            AppDatabase::class.java, "custom-points"
+            CustomLinksDatabase::class.java, "custom-points"
         ).build()
     }
 

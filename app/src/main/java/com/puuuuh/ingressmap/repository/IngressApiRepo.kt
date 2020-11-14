@@ -112,18 +112,44 @@ data class Resonator(val raw: ArrayList<Any>) {
     }
 }
 
-data class Portal(val guid: String, val raw: ArrayList<Any>) {
-    var lat = 0f.toDouble()
-    var lng = 0f.toDouble()
-    var lvl = 0
-    var energy = 0
-    var pic = ""
-    var name = ""
-    var team = ""
-    var mods = mutableListOf<Mod>()
-    var resonators = mutableListOf<Resonator>()
-    var owner = ""
-    init {
+data class Portal(
+    var guid: String,
+    var lat: Double,
+    var lng: Double,
+    var lvl: Int,
+    var energy: Int,
+    var pic: String,
+    var name: String,
+    var team: String,
+    var mods: MutableList<Mod>,
+    var resonators: MutableList<Resonator>,
+    var owner: String,
+) {
+
+
+    constructor() : this(
+        "",
+        0f.toDouble(),
+        0f.toDouble(),
+        0,
+        0,
+        "",
+        "",
+        "",
+        mutableListOf<Mod>(),
+        mutableListOf<Resonator>(),
+        ""
+    )
+
+    constructor(guid: String, name: String, lat: Double, lng: Double) : this() {
+        this.guid = guid
+        this.name = name
+        this.lat = lat
+        this.lng = lng
+    }
+
+    constructor(guid: String, raw: ArrayList<Any>) : this() {
+        this.guid = guid
         team = raw[1] as String
         lat = raw[2] as Double / 1000000
         lng = raw[3] as Double / 1000000

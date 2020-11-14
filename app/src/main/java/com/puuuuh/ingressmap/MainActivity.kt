@@ -22,11 +22,14 @@ import androidx.navigation.ui.setupWithNavController
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.material.navigation.NavigationView
 import com.puuuuh.ingressmap.repository.PlacesRepository
+import com.puuuuh.ingressmap.repository.Portal
+import com.puuuuh.ingressmap.repository.PortalsRepo
 import com.puuuuh.ingressmap.settings.Settings
 import com.puuuuh.ingressmap.view.LoginActivity
 import com.puuuuh.ingressmap.view.PortalInfo
 import com.puuuuh.ingressmap.viewmodel.MapViewModel
 import com.puuuuh.ingressmap.viewmodel.ViewmodelFactory
+import kotlinx.android.synthetic.main.search_switch.*
 import kotlinx.coroutines.*
 
 
@@ -146,6 +149,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.main_menu, menu)
+        val item = menu.findItem(R.id.search_toggle_item)
+        item.setActionView(R.layout.search_switch)
 
         val searchView: SearchView = menu.findItem(R.id.action_search).actionView as SearchView
         val columNames =
@@ -158,8 +163,10 @@ class MainActivity : AppCompatActivity() {
         )
         searchView.suggestionsAdapter = adapter
 
-        val repo = PlacesRepository()
-        repo.data.observe(this, androidx.lifecycle.Observer {
+        val portalsRepo = PortalsRepo()
+        val placesRepo = PlacesRepository()
+
+        placesRepo.data.observe(this, androidx.lifecycle.Observer {
             val columns =
                 arrayOf("_id", "suggest_text_1", "lat", "lng")
 
@@ -182,8 +189,31 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        val trottle = throttleLatest<String>(1000, GlobalScope) {
-            repo.get(it)
+        val portalsThrottle = throttleLatest<String>(1000, GlobalScope) {
+            GlobalScope.launch {
+                val columns =
+                    arrayOf("_id", "suggest_text_1", "lat", "lng", "id")
+
+                val matrixCursor = MatrixCursor(columns)
+                for ((i, data) in portalsRepo.find(it).withIndex()) {
+                    matrixCursor.addRow(
+                        arrayOf(
+                            i,
+                            data.title,
+                            data.lng,
+                            data.lat,
+                            data.id,
+                        )
+                    )
+                }
+                runOnUiThread {
+                    adapter.swapCursor(matrixCursor)
+                }
+            }
+        }
+
+        val placesThrottle = throttleLatest<String>(1000, GlobalScope) {
+            placesRepo.get(it)
         }
 
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
@@ -193,7 +223,10 @@ class MainActivity : AppCompatActivity() {
 
             override fun onQueryTextChange(newText: String?): Boolean {
                 if (newText != null) {
-                    trottle(newText)
+                    if (search_toggle.isChecked)
+                        placesThrottle(newText)
+                    else
+                        portalsThrottle(newText)
                 }
                 return true
             }
@@ -208,6 +241,15 @@ class MainActivity : AppCompatActivity() {
                 val test = adapter.getItem(position)
                 if (test is MatrixCursor) {
                     mapViewModel.moveCamera(LatLng(test.getDouble(3), test.getDouble(2)))
+                    if (test.columnCount == 5)
+                        mapViewModel.selectPortal(
+                            Portal(
+                                test.getString(4),
+                                test.getString(1),
+                                test.getDouble(3),
+                                test.getDouble(2)
+                            )
+                        )
                 }
 
                 return true
