@@ -1,6 +1,7 @@
 package com.puuuuh.ingressmap.view
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Bundle
@@ -54,6 +55,7 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
 
         val map = childFragmentManager.findFragmentById(R.id.map)
         (map as SupportMapFragment).getMapAsync(this)
+
         return view
     }
 
@@ -313,6 +315,25 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
             }
             customFields = new
         })
+
+        floatingActionButton.setOnClickListener {
+            val sendIntent: Intent = Intent().apply {
+                action = Intent.ACTION_SEND
+                putExtra(
+                    Intent.EXTRA_TEXT,
+                    String.format(
+                        "http://intel.ingress.com/intel?ll=%f,%f&z=%d",
+                        mMap.cameraPosition.target.latitude,
+                        mMap.cameraPosition.target.longitude,
+                        mMap.cameraPosition.zoom.toInt()
+                    )
+                )
+                type = "text/plain"
+            }
+
+            val shareIntent = Intent.createChooser(sendIntent, null)
+            startActivity(shareIntent)
+        }
     }
 
     private fun enableMyLocation() {
@@ -350,4 +371,6 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
         mapViewModel.removeCustomLine(p0.tag as String)
         return
     }
+
+
 }
