@@ -6,6 +6,7 @@ import android.database.MatrixCursor
 import android.net.Uri
 import android.os.Bundle
 import android.view.Menu
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
@@ -13,7 +14,6 @@ import androidx.appcompat.widget.Toolbar
 import androidx.cursoradapter.widget.CursorAdapter
 import androidx.cursoradapter.widget.SimpleCursorAdapter
 import androidx.drawerlayout.widget.DrawerLayout
-import androidx.lifecycle.Observer
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
@@ -38,6 +38,13 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var appBarConfiguration: AppBarConfiguration
     private val mapViewModel: MapViewModel by viewModels { ViewmodelFactory(applicationContext) }
+    private val loginContract = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        if (Settings.token == "") {
+            startLogin()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -74,13 +81,13 @@ class MainActivity : AppCompatActivity() {
 
 
 
-        Settings.liveToken.observe(this, Observer {
+        Settings.liveToken.observe(this, {
             if (it == "") {
                 startLogin()
             }
         })
 
-        Settings.liveMapProvider.observe(this, Observer {
+        Settings.liveMapProvider.observe(this, {
             navView.menu.clear()
             appBarConfiguration = if (it == "osm") {
                 navView.inflateMenu(R.menu.drawer_osm)
@@ -120,7 +127,7 @@ class MainActivity : AppCompatActivity() {
 
         mapViewModel.selectedPortal.observe(
             this,
-            androidx.lifecycle.Observer { data ->
+            { data ->
                 if (data != null) {
                     val fm = supportFragmentManager
                     val dlg = PortalInfo.newInstance(data)
@@ -167,7 +174,7 @@ class MainActivity : AppCompatActivity() {
         val portalsRepo = PortalsRepo()
         val placesRepo = PlacesRepository()
 
-        placesRepo.data.observe(this, androidx.lifecycle.Observer {
+        placesRepo.data.observe(this, {
             val columns =
                 arrayOf("_id", "suggest_text_1", "lat", "lng")
 
@@ -265,7 +272,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun startLogin() {
         val intent = Intent(this, LoginActivity::class.java)
-        startActivity(intent)
+        loginContract.launch(intent)
     }
 
     override fun onSupportNavigateUp(): Boolean {

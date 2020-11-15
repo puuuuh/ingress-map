@@ -1,4 +1,4 @@
-package com.puuuuh.ingressmap.repository
+package com.puuuuh.ingressmap.utils
 
 import com.puuuuh.ingressmap.settings.Settings
 import okhttp3.Interceptor

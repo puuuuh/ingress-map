@@ -45,7 +45,12 @@ class PortalDeserializer : JsonDeserializer<PortalData> {
         val lng = entityData[3].asDouble / 1000000
         val lvl = entityData[4].asInt
         val energy = entityData[5].asInt / 1000000
-        val pic = entityData[7].asString
+
+        val pic = if (entityData[7].isJsonNull) {
+            ""
+        } else {
+            entityData[7].asString
+        }
         val name = entityData[8].asString
         if (entityData.size() > 14) {
             val rawModArr = entityData[14].asJsonArray

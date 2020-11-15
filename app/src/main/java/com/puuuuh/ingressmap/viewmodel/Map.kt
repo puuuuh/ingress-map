@@ -18,6 +18,7 @@ import com.puuuuh.ingressmap.utils.toLatLng
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.collections.HashMap
 import kotlin.math.*
 
@@ -47,9 +48,9 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
     private val handler = Handler(context.mainLooper)
 
     // All cached entities
-    private val allPortals = mutableMapOf<String, GameEntity.Portal>()
-    private val allLinks = mutableMapOf<String, GameEntity.Link>()
-    private val allFields = mutableMapOf<String, GameEntity.Field>()
+    private val allPortals = ConcurrentHashMap<String, GameEntity.Portal>()
+    private val allLinks = ConcurrentHashMap<String, GameEntity.Link>()
+    private val allFields = ConcurrentHashMap<String, GameEntity.Field>()
 
     // Current viewport
     private var viewport = LatLngBounds(LatLng(0.0, 0.0), LatLng(0.0, 0.0))
@@ -247,10 +248,10 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
         } else {
             _customPointLinks[points.second]!!.add(points.first)
         }
-        val points = poly.points.map {
+        val pointList = poly.points.map {
             Point(it.latitude, it.longitude)
         }
-        return GameEntity.Link(id, LinkData("C", Pair(points[0], points[1])))
+        return GameEntity.Link(id, LinkData("C", Pair(pointList[0], pointList[1])))
     }
 
     private fun addCustomField(points: List<LatLng>) {

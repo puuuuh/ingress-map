@@ -78,12 +78,14 @@ class OsmMap : Fragment(), MapListener, Marker.OnMarkerClickListener {
 
         var prev: FolderOverlay? = null
 
-        mapViewModel.targetPosition.observe(viewLifecycleOwner, androidx.lifecycle.Observer {
-            mMap.controller.setCenter(GeoPoint(it.latitude, it.longitude))
-            mMap.controller.setZoom(17.toDouble())
+        mapViewModel.targetPosition.observe(viewLifecycleOwner, {
+            if (it.longitude != 0.0 && it.latitude != 0.0) {
+                mMap.controller.setCenter(GeoPoint(it.latitude, it.longitude))
+                mMap.controller.setZoom(17.toDouble())
+            }
         })
 
-        mapViewModel.portals.observe(viewLifecycleOwner, androidx.lifecycle.Observer {
+        mapViewModel.portals.observe(viewLifecycleOwner, {
             val next = FolderOverlay()
             for (i in it) {
                 val iconRes = when (i.value.data.team) {
@@ -116,7 +118,7 @@ class OsmMap : Fragment(), MapListener, Marker.OnMarkerClickListener {
         })
 
         var prevLinks: FolderOverlay? = null
-        mapViewModel.links.observe(viewLifecycleOwner, androidx.lifecycle.Observer {
+        mapViewModel.links.observe(viewLifecycleOwner, {
             val next = FolderOverlay()
             for (i in it) {
                 val line = Polyline(mMap)
@@ -145,7 +147,7 @@ class OsmMap : Fragment(), MapListener, Marker.OnMarkerClickListener {
         })
 
         var prevFields: FolderOverlay? = null
-        mapViewModel.fields.observe(viewLifecycleOwner, androidx.lifecycle.Observer {
+        mapViewModel.fields.observe(viewLifecycleOwner, {
             val next = FolderOverlay()
             for (i in it) {
 
@@ -198,7 +200,7 @@ class OsmMap : Fragment(), MapListener, Marker.OnMarkerClickListener {
         })
 
         var prevCells: FolderOverlay? = null
-        mapViewModel.cellLines.observe(viewLifecycleOwner, androidx.lifecycle.Observer { data ->
+        mapViewModel.cellLines.observe(viewLifecycleOwner, { data ->
             val next = FolderOverlay()
 
             for ((i, opts) in data) {

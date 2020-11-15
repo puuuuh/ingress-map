@@ -42,9 +42,7 @@ class PlacesRepository {
     var okHttpClient: OkHttpClient = OkHttpClient()
 
     init {
-        okHttpClient = OkHttpClient.Builder()
-            .addInterceptor(AuthInterceptor())
-            .build()
+        okHttpClient = OkHttpClient.Builder().build()
     }
 
     private val _data = MutableLiveData<List<Feature>>()

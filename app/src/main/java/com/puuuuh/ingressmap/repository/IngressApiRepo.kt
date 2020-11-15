@@ -5,6 +5,7 @@ import com.puuuuh.ingressmap.MainApplication
 import com.puuuuh.ingressmap.model.GameEntity
 import com.puuuuh.ingressmap.model.PortalData
 import com.puuuuh.ingressmap.settings.Settings
+import com.puuuuh.ingressmap.utils.AuthInterceptor
 import okhttp3.*
 import java.io.IOException
 import java.net.URL
@@ -38,14 +39,20 @@ data class GetEntitiesResponse (
     data class EntitiesMap(
         val map: Map<String, Entities>
     ) {
-        data class Entities (
+        data class Entities(
             val gameEntities: Array<GameEntity>?
         )
     }
 }
 
-data class GetPortalDataResponse (
+data class GetPortalDataResponse(
     val result: PortalData
+)
+
+data class CacheEntry(
+    val portals: Map<String, GameEntity.Portal>,
+    val links: Map<String, GameEntity.Link>,
+    val fields: Map<String, GameEntity.Field>,
 )
 
 class IngressApiRepo {
@@ -73,14 +80,16 @@ class IngressApiRepo {
 
         val payload = g.toJson(GetPortalDataPayload(guid))
 
-        apiCall("getPortalDetails", payload, object: Callback {
+        apiCall("getPortalDetails", payload, object : Callback {
             override fun onFailure(call: Call?, e: IOException?) {
-                getExtendedPortalData(guid, callback, retry+1)
+                getExtendedPortalData(guid, callback, retry + 1)
             }
 
             override fun onResponse(call: Call?, response: Response?) {
-                if (response!!.code() != 200 || (response.body()?.contentType()?.type() != "application" ||
-                        response.body()?.contentType()?.subtype() != "json"))
+                if (response!!.code() != 200 || (response.body()?.contentType()
+                        ?.type() != "application" ||
+                            response.body()?.contentType()?.subtype() != "json")
+                )
                     return
                 try {
                     val json = response.body()?.string()
@@ -93,8 +102,8 @@ class IngressApiRepo {
         })
     }
 
-    fun getTilesInfo( tiles: List<String>, callback: OnDataReadyCallback, retry: Int = 0) {
-        if (retry > 2) {
+    fun getTilesInfo(tiles: List<String>, callback: OnDataReadyCallback, retry: Int = 0) {
+        if (retry > 4) {
             return
         }
 

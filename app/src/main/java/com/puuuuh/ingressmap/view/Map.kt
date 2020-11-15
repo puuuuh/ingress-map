@@ -48,7 +48,7 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
 
         if (Settings.myLocation) {
             registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
-                if (it[Manifest.permission.ACCESS_FINE_LOCATION] != true) {
+                if (it[Manifest.permission.ACCESS_FINE_LOCATION] == false) {
                     Settings.myLocation = false
                 }
             }.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))
@@ -77,11 +77,12 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
         mMap.mapType = GoogleMap.MAP_TYPE_HYBRID
         enableMyLocation()
 
-        mapViewModel.targetPosition.observe(viewLifecycleOwner, androidx.lifecycle.Observer {
-            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(it, 17f))
+        mapViewModel.targetPosition.observe(viewLifecycleOwner, {
+            if (it.longitude != 0.0 && it.latitude != 0.0)
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(it, 17f))
         })
 
-        mapViewModel.portals.observe(viewLifecycleOwner, androidx.lifecycle.Observer {
+        mapViewModel.portals.observe(viewLifecycleOwner, {
             val newPortals = mutableMapOf<String, Pair<Marker, Circle?>>()
             for (i in it) {
                 val old = portals.remove(i.key)
@@ -148,7 +149,7 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
             }
             portals = newPortals
         })
-        mapViewModel.links.observe(viewLifecycleOwner, androidx.lifecycle.Observer { data ->
+        mapViewModel.links.observe(viewLifecycleOwner, { data ->
             val newLinks = mutableMapOf<String, Polyline>()
             for (i in data) {
                 val old = links.remove(i.key)
@@ -194,7 +195,7 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
             }
             links = newLinks
         })
-        mapViewModel.fields.observe(viewLifecycleOwner, androidx.lifecycle.Observer { data ->
+        mapViewModel.fields.observe(viewLifecycleOwner, { data ->
             val newFields = mutableMapOf<String, Polygon>()
             for (i in data) {
                 val old = fields.remove(i.key)
@@ -230,7 +231,7 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
             }
             fields = newFields
         })
-        mapViewModel.cellLines.observe(viewLifecycleOwner, androidx.lifecycle.Observer { data ->
+        mapViewModel.cellLines.observe(viewLifecycleOwner, { data ->
             val newLines = hashMapOf<S2CellId, Polyline>()
             data.map {
                 var line = lines[it.key]
@@ -260,15 +261,15 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
             lines = newLines
         })
 
-        mapViewModel.status.observe(viewLifecycleOwner, androidx.lifecycle.Observer {
-            statusView.text = "Status: " + if (it.requestsInProgress == 0) {
-                "up to date"
+        mapViewModel.status.observe(viewLifecycleOwner, {
+            statusView.text = if (it.requestsInProgress == 0) {
+                getString(R.string.status_ok)
             } else {
-                "${it.requestsInProgress} request in progress, please, wait..."
+                String.format(getString(R.string.status_in_progress), it.requestsInProgress)
             }
         })
 
-        mapViewModel.customLines.observe(viewLifecycleOwner, androidx.lifecycle.Observer { data ->
+        mapViewModel.customLines.observe(viewLifecycleOwner, { data ->
             val newLinks = mutableMapOf<String, Polyline>()
             for (i in data) {
                 val old = customLinks.remove(i.key)
@@ -293,7 +294,7 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
             customLinks = newLinks
         })
 
-        mapViewModel.selectedPoint.observe(viewLifecycleOwner, androidx.lifecycle.Observer { data ->
+        mapViewModel.selectedPoint.observe(viewLifecycleOwner, { data ->
             selectedPoint?.remove()
             if (data != null) {
                 selectedPoint = mMap.addMarker(
@@ -303,7 +304,7 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
             }
         })
 
-        mapViewModel.customFields.observe(viewLifecycleOwner, androidx.lifecycle.Observer { data ->
+        mapViewModel.customFields.observe(viewLifecycleOwner, { data ->
             val new = mutableMapOf<String, Polygon>()
             for (i in data) {
                 val old = customFields.remove(i.key)
@@ -357,7 +358,9 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
         ) {
             return
         }
-        mMap.isMyLocationEnabled = true
+        if (this::mMap.isInitialized) {
+            mMap.isMyLocationEnabled = true
+        }
     }
 
     override fun onCameraIdle() {
