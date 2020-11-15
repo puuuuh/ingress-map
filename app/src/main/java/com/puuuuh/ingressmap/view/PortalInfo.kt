@@ -10,7 +10,7 @@ import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.puuuuh.ingressmap.R
-import com.puuuuh.ingressmap.repository.Portal
+import com.puuuuh.ingressmap.model.GameEntity
 import com.puuuuh.ingressmap.viewmodel.PortalInfo
 import com.puuuuh.ingressmap.viewmodel.ViewmodelFactory
 import com.squareup.picasso.Picasso
@@ -32,15 +32,15 @@ val lvlToColor = intArrayOf(
 class PortalInfo : DialogFragment() {
 
     companion object {
-        fun newInstance(e: Portal) = PortalInfo()
+        fun newInstance(e: GameEntity.Portal) = PortalInfo()
             .apply {
-            arguments = Bundle().apply {
-                putString("pic", e.pic)
-                putString("name", e.name)
-                putString("team", e.team)
-                putString("guid", e.guid)
+                arguments = Bundle().apply {
+                    putString("pic", e.data.pic)
+                    putString("name", e.data.name)
+                    putString("team", e.data.team)
+                    putString("guid", e.id)
+                }
             }
-        }
     }
 
     private lateinit var viewModel: PortalInfo

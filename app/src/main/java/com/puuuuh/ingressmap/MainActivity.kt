@@ -21,8 +21,9 @@ import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.material.navigation.NavigationView
+import com.puuuuh.ingressmap.model.GameEntity
+import com.puuuuh.ingressmap.model.PortalData
 import com.puuuuh.ingressmap.repository.PlacesRepository
-import com.puuuuh.ingressmap.repository.Portal
 import com.puuuuh.ingressmap.repository.PortalsRepo
 import com.puuuuh.ingressmap.settings.Settings
 import com.puuuuh.ingressmap.view.LoginActivity
@@ -243,11 +244,13 @@ class MainActivity : AppCompatActivity() {
                     mapViewModel.moveCamera(LatLng(test.getDouble(3), test.getDouble(2)))
                     if (test.columnCount == 5)
                         mapViewModel.selectPortal(
-                            Portal(
+                            GameEntity.Portal(
                                 test.getString(4),
-                                test.getString(1),
-                                test.getDouble(3),
-                                test.getDouble(2)
+                                PortalData(
+                                    test.getString(1),
+                                    test.getDouble(3),
+                                    test.getDouble(2)
+                                )
                             )
                         )
                 }

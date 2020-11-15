@@ -3,12 +3,12 @@ package com.puuuuh.ingressmap.repository
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.Transformations
 import androidx.room.*
-import com.google.android.gms.maps.model.LatLng
 import com.puuuuh.ingressmap.MainApplication
+import com.puuuuh.ingressmap.model.GameEntity
+import com.puuuuh.ingressmap.model.LinkData
+import com.puuuuh.ingressmap.model.Point
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-
-
 
 @Entity
 data class CustomLink(
@@ -44,27 +44,29 @@ class CustomPointsRepo {
         ).build()
     }
 
-    fun getAll(): LiveData<List<Link>> {
+    fun getAll(): LiveData<List<GameEntity.Link>> {
         return Transformations.map(db.linksDao().getAll()) {
             it.map {
-                Link(
+                GameEntity.Link(
                     it.id,
-                    "C",
-                    arrayOf(Point(LatLng(it.lat1, it.lng1)), Point(LatLng(it.lat2, it.lng2)))
+                    LinkData(
+                        "C",
+                        Pair(Point(it.lat1, it.lng1), Point(it.lat2, it.lng2))
+                    )
                 )
             }
 
         }
     }
 
-    fun add(l: Link) {
+    fun add(l: GameEntity.Link) {
         GlobalScope.launch {
             val dto = CustomLink(
                 l.id,
-                l.points[0].LatLng.latitude,
-                l.points[0].LatLng.longitude,
-                l.points[1].LatLng.latitude,
-                l.points[1].LatLng.longitude
+                l.data.points.first.lat,
+                l.data.points.first.lng,
+                l.data.points.second.lat,
+                l.data.points.second.lng,
             )
             db.linksDao().insertAll(dto)
         }

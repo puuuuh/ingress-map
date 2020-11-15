@@ -4,7 +4,11 @@ import android.content.Context
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.puuuuh.ingressmap.repository.*
+import com.puuuuh.ingressmap.model.Mod
+import com.puuuuh.ingressmap.model.PortalData
+import com.puuuuh.ingressmap.model.Resonator
+import com.puuuuh.ingressmap.repository.IngressApiRepo
+import com.puuuuh.ingressmap.repository.OnPortalExReadyCallback
 
 
 class PortalInfo(context: Context) : ViewModel(), OnPortalExReadyCallback {
@@ -50,7 +54,7 @@ class PortalInfo(context: Context) : ViewModel(), OnPortalExReadyCallback {
         ingressRepo.getExtendedPortalData(guid, this)
     }
 
-    override fun OnPortalExReady(portal: Portal) {
+    override fun onPortalExReady(portal: PortalData) {
         _lvl.postValue(portal.lvl)
         _energy.postValue(portal.energy)
         _pic.postValue(portal.pic)

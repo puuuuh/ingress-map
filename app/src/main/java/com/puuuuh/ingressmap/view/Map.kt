@@ -19,8 +19,9 @@ import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
 import com.google.common.geometry.S2CellId
 import com.puuuuh.ingressmap.R
-import com.puuuuh.ingressmap.repository.Portal
+import com.puuuuh.ingressmap.model.GameEntity
 import com.puuuuh.ingressmap.settings.Settings
+import com.puuuuh.ingressmap.utils.toLatLng
 import com.puuuuh.ingressmap.viewmodel.MapViewModel
 import com.puuuuh.ingressmap.viewmodel.ViewmodelFactory
 import kotlinx.android.synthetic.main.fragment_map.*
@@ -84,7 +85,7 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
             val newPortals = mutableMapOf<String, Pair<Marker, Circle?>>()
             for (i in it) {
                 val old = portals.remove(i.key)
-                val iconRes = when (i.value.team) {
+                val iconRes = when (i.value.data.team) {
                     "E" -> {
                         R.drawable.ic_green_portal
                     }
@@ -95,11 +96,11 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
                         R.drawable.ic_white_portal
                     }
                 }
-                val pos = LatLng(i.value.lat, i.value.lng)
+                val pos = LatLng(i.value.data.lat, i.value.data.lng)
                 if (old == null) {
                     val m = MarkerOptions()
                         .position(pos)
-                        .title(i.value.name)
+                        .title(i.value.data.name)
                         .icon(BitmapDescriptorFactory.fromResource(iconRes))
                         .zIndex(2f)
                         .anchor(0.5f, 0.5f)
@@ -122,7 +123,7 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
                         old.second?.center = pos
                         old.first.position = pos
                     }
-                    if ((old.first.tag as Portal).team != i.value.team) {
+                    if ((old.first.tag as GameEntity.Portal).data.team != i.value.data.team) {
                         old.first.setIcon(BitmapDescriptorFactory.fromResource(iconRes))
                     }
                     if (mMap.cameraPosition.zoom > 16 && old.second == null) {
@@ -151,7 +152,7 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
             val newLinks = mutableMapOf<String, Polyline>()
             for (i in data) {
                 val old = links.remove(i.key)
-                val color = if (i.value.team == "E") {
+                val color = if (i.value.data.team == "E") {
                     Color.GREEN
                 } else {
                     Color.BLUE
@@ -159,7 +160,10 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
 
                 if (old == null) {
                     val m = PolylineOptions()
-                        .add(i.value.points[0].LatLng, i.value.points[1].LatLng)
+                        .add(
+                            LatLng(i.value.data.points.first.lat, i.value.data.points.first.lng),
+                            LatLng(i.value.data.points.second.lat, i.value.data.points.second.lng)
+                        )
                         .width(2f)
                         .zIndex(3f)
                         .color(color)
@@ -169,11 +173,17 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
                     if (old.color != color) {
                         old.color = color
                     }
-                    if (old.points[0] != i.value.points[0].LatLng) {
-                        old.points[0] = i.value.points[0].LatLng
+                    if (old.points[0].latitude != i.value.data.points.first.lat ||
+                        old.points[0].longitude != i.value.data.points.first.lng
+                    ) {
+                        old.points[0] =
+                            LatLng(i.value.data.points.first.lat, i.value.data.points.first.lng)
                     }
-                    if (old.points[1] != i.value.points[1].LatLng) {
-                        old.points[1] = i.value.points[1].LatLng
+                    if (old.points[1].latitude != i.value.data.points.second.lat ||
+                        old.points[1].longitude != i.value.data.points.second.lng
+                    ) {
+                        old.points[1] =
+                            LatLng(i.value.data.points.second.lat, i.value.data.points.second.lng)
                     }
                     newLinks[i.key] = old
                 }
@@ -189,21 +199,21 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
             for (i in data) {
                 val old = fields.remove(i.key)
                 if (old == null) {
-                    val color = if (i.value.team == "E") {
+                    val color = if (i.value.data.team == "E") {
                         Color.argb(100, 0, 255, 0)
                     } else {
                         Color.argb(100, 0, 0, 255)
                     }
-                    val strokeColor = if (i.value.team == "E") {
+                    val strokeColor = if (i.value.data.team == "E") {
                         Color.argb(255, 0, 255, 0)
                     } else {
                         Color.argb(255, 0, 140, 255)
                     }
                     val m = PolygonOptions()
                         .add(
-                            i.value.points[0].LatLng,
-                            i.value.points[1].LatLng,
-                            i.value.points[2].LatLng
+                            i.value.data.points.first.toLatLng(),
+                            i.value.data.points.second.toLatLng(),
+                            i.value.data.points.third.toLatLng(),
                         )
                         .fillColor(color)
                         .strokeWidth(4f)
@@ -359,8 +369,8 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
     }
 
     override fun onMarkerClick(p0: Marker?): Boolean {
-        if (p0?.tag is Portal) {
-            mapViewModel.selectPortal(p0.tag as Portal)
+        if (p0?.tag is GameEntity.Portal) {
+            mapViewModel.selectPortal(p0.tag as GameEntity.Portal)
             return true
         }
 

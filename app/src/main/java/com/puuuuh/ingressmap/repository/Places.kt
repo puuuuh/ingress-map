@@ -2,8 +2,8 @@ package com.puuuuh.ingressmap.repository
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import com.google.gson.Gson
 import com.puuuuh.ingressmap.BuildConfig
+import com.puuuuh.ingressmap.MainApplication
 import okhttp3.*
 import java.io.IOException
 
@@ -68,7 +68,7 @@ class PlacesRepository {
             override fun onResponse(call: Call?, response: Response?) {
                 try {
                     val json = response?.body()?.string()
-                    val res = Gson().fromJson(json, Places::class.java)
+                    val res = MainApplication.gson.fromJson(json, Places::class.java)
                     _data.postValue(res.features)
                 } catch (e: Exception) {
                 }

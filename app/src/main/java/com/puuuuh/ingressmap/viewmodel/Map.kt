@@ -9,15 +9,23 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.common.geometry.S2CellId
+import com.puuuuh.ingressmap.model.GameEntity
+import com.puuuuh.ingressmap.model.LinkData
+import com.puuuuh.ingressmap.model.Point
 import com.puuuuh.ingressmap.repository.*
 import com.puuuuh.ingressmap.settings.Settings
+import com.puuuuh.ingressmap.utils.toLatLng
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.util.*
 import kotlin.collections.HashMap
 import kotlin.math.*
 
-data class CellData(val portals: Map<String, Portal>, val links: Map<String, Link>, val fields: Map<String, Field>)
+data class CellData(
+    val portals: Map<String, GameEntity.Portal>,
+    val links: Map<String, GameEntity.Link>,
+    val fields: Map<String, GameEntity.Field>
+)
 
 data class Status(val requestsInProgress: Int)
 
@@ -39,9 +47,9 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
     private val handler = Handler(context.mainLooper)
 
     // All cached entities
-    private val allPortals = mutableMapOf<String, Portal>()
-    private val allLinks = mutableMapOf<String, Link>()
-    private val allFields = mutableMapOf<String, Field>()
+    private val allPortals = mutableMapOf<String, GameEntity.Portal>()
+    private val allLinks = mutableMapOf<String, GameEntity.Link>()
+    private val allFields = mutableMapOf<String, GameEntity.Field>()
 
     // Current viewport
     private var viewport = LatLngBounds(LatLng(0.0, 0.0), LatLng(0.0, 0.0))
@@ -50,17 +58,17 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
     private val _targetPosition = MutableLiveData<LatLng>()
     val targetPosition: LiveData<LatLng> = _targetPosition
 
-    private val _portals = MutableLiveData<Map<String, Portal>>()
-    val portals: LiveData<Map<String, Portal>> = _portals
+    private val _portals = MutableLiveData<Map<String, GameEntity.Portal>>()
+    val portals: LiveData<Map<String, GameEntity.Portal>> = _portals
 
     private val _cellLines = MutableLiveData<Map<S2CellId, PolylineOptions>>()
     val cellLines: LiveData<Map<S2CellId, PolylineOptions>> = _cellLines
 
-    private val _links = MutableLiveData<Map<String, Link>>()
-    val links: LiveData<Map<String, Link>> = _links
+    private val _links = MutableLiveData<Map<String, GameEntity.Link>>()
+    val links: LiveData<Map<String, GameEntity.Link>> = _links
 
-    private val _fields = MutableLiveData<Map<String, Field>>()
-    val fields: LiveData<Map<String, Field>> = _fields
+    private val _fields = MutableLiveData<Map<String, GameEntity.Field>>()
+    val fields: LiveData<Map<String, GameEntity.Field>> = _fields
 
     private val _customFields = MutableLiveData<Map<String, List<LatLng>>>()
     val customFields: LiveData<Map<String, List<LatLng>>> = _customFields
@@ -76,8 +84,8 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
     private val _selectedPoint = MutableLiveData<LatLng?>()
     val selectedPoint: LiveData<LatLng?> = _selectedPoint
 
-    private val _selectedPortal = MutableLiveData<Portal?>()
-    val selectedPortal: LiveData<Portal?> = _selectedPortal
+    private val _selectedPortal = MutableLiveData<GameEntity.Portal?>()
+    val selectedPortal: LiveData<GameEntity.Portal?> = _selectedPortal
 
     private val _cellCache = mutableMapOf<String, CellData>()
 
@@ -87,7 +95,10 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
         val links = customPointRepo.getAll()
         links.observeForever { list ->
             list.map {
-                addCustomLink(it.id, Pair(it.points[0].LatLng, it.points[1].LatLng))
+                addCustomLink(
+                    it.id,
+                    Pair(it.data.points.first.toLatLng(), it.data.points.second.toLatLng())
+                )
             }
         }
     }
@@ -120,7 +131,7 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
         val new = if (!Settings.showFields || zoom < 13) {
             mapOf()
         } else {
-            allFields.filter { field -> field.value.bounds.intersects(viewport) }
+            allFields.filter { field -> field.value.data.bounds.intersects(viewport) }
         }
         if (new != _fields.value)
             _fields.postValue(new)
@@ -130,7 +141,7 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
         val new = if (!Settings.showLinks || zoom < 14) {
             mapOf()
         } else {
-            allLinks.filter { link -> link.value.bounds.intersects(viewport) }
+            allLinks.filter { link -> link.value.data.bounds.intersects(viewport) }
         }
         if (new != _links.value)
             _links.postValue(new)
@@ -186,15 +197,15 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
         val new = if (!Settings.showPortals || zoom < 13.5) {
             mapOf()
         } else {
-            allPortals.filter { viewport.contains(LatLng(it.value.lat, it.value.lng)) }
+            allPortals.filter { viewport.contains(LatLng(it.value.data.lat, it.value.data.lng)) }
         }
         if (new != _portals.value)
             _portals.postValue(new)
     }
 
-    fun selectPortal(value: Portal?) {
+    fun selectPortal(value: GameEntity.Portal?) {
         if (Settings.drawMode && value != null) {
-            addCustomPoint(LatLng(value.lat, value.lng))
+            addCustomPoint(LatLng(value.data.lat, value.data.lng))
         } else {
             _selectedPortal.value = value
         }
@@ -213,7 +224,7 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
         }
     }
 
-    private fun addCustomLink(id: String, points: Pair<LatLng, LatLng>): Link? {
+    private fun addCustomLink(id: String, points: Pair<LatLng, LatLng>): GameEntity.Link? {
         if (points.first == points.second || _customPointLinks[points.first]?.contains(points.second) == true) {
             return null
         }
@@ -236,9 +247,10 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
         } else {
             _customPointLinks[points.second]!!.add(points.first)
         }
-        return Link(id, "C", (poly.points.map {
-            Point(LatLng(it.latitude, it.longitude))
-        }).toTypedArray())
+        val points = poly.points.map {
+            Point(it.latitude, it.longitude)
+        }
+        return GameEntity.Link(id, LinkData("C", Pair(points[0], points[1])))
     }
 
     private fun addCustomField(points: List<LatLng>) {
@@ -284,9 +296,9 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
 
     override fun onCellDataReceived(
         cellId: String,
-        portals: Map<String, Portal>,
-        links: Map<String, Link>,
-        fields: Map<String, Field>
+        portals: Map<String, GameEntity.Portal>,
+        links: Map<String, GameEntity.Link>,
+        fields: Map<String, GameEntity.Field>
     ) {
         val cachedVersion = _cellCache[cellId]
         var updates = 0
@@ -300,7 +312,14 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
             for (p in portals) {
                 val old = allPortals[p.key]
                 if (old != p.value) {
-                    portalsRepo.add(PortalDto(p.key, p.value.name, p.value.lat, p.value.lng))
+                    portalsRepo.add(
+                        PortalDto(
+                            p.key,
+                            p.value.data.name,
+                            p.value.data.lat,
+                            p.value.data.lng
+                        )
+                    )
                     allPortals[p.key] = p.value
                     updates++
                 }
@@ -331,7 +350,14 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
             for (p in portals) {
                 val old = allPortals[p.key]
                 if (old != p.value) {
-                    portalsRepo.add(PortalDto(p.key, p.value.name, p.value.lat, p.value.lng))
+                    portalsRepo.add(
+                        PortalDto(
+                            p.key,
+                            p.value.data.name,
+                            p.value.data.lat,
+                            p.value.data.lng
+                        )
+                    )
                     allPortals[p.key] = p.value
                     updates++
                 }

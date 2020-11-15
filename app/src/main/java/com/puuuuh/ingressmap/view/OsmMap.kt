@@ -14,8 +14,10 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.puuuuh.ingressmap.BuildConfig
 import com.puuuuh.ingressmap.R
-import com.puuuuh.ingressmap.repository.Portal
+import com.puuuuh.ingressmap.model.GameEntity
+import com.puuuuh.ingressmap.model.PortalData
 import com.puuuuh.ingressmap.settings.Settings
+import com.puuuuh.ingressmap.utils.toGeoPoint
 import com.puuuuh.ingressmap.viewmodel.MapViewModel
 import com.puuuuh.ingressmap.viewmodel.ViewmodelFactory
 import kotlinx.android.synthetic.main.fragment_osmmap.*
@@ -84,7 +86,7 @@ class OsmMap : Fragment(), MapListener, Marker.OnMarkerClickListener {
         mapViewModel.portals.observe(viewLifecycleOwner, androidx.lifecycle.Observer {
             val next = FolderOverlay()
             for (i in it) {
-                val iconRes = when (i.value.team) {
+                val iconRes = when (i.value.data.team) {
                     "E" -> {
                         R.drawable.ic_green_portal
                     }
@@ -100,7 +102,7 @@ class OsmMap : Fragment(), MapListener, Marker.OnMarkerClickListener {
                 point.setOnMarkerClickListener(this)
                 point.icon = ResourcesCompat.getDrawable(resources, iconRes, null)
                 point.setAnchor(0.5f, 0.5f)
-                point.position = GeoPoint(i.value.lat, i.value.lng)
+                point.position = GeoPoint(i.value.data.lat, i.value.data.lng)
                 point.infoWindow = null
                 next.add(point)
             }
@@ -119,23 +121,17 @@ class OsmMap : Fragment(), MapListener, Marker.OnMarkerClickListener {
             for (i in it) {
                 val line = Polyline(mMap)
                 line.infoWindow = null
-                line.color = if (i.value.team == "E") {
+                line.color = if (i.value.data.team == "E") {
                     Color.GREEN
                 } else {
                     Color.BLUE
                 }
                 line.width = 2f
                 line.addPoint(
-                    GeoPoint(
-                        i.value.points[0].LatLng.latitude,
-                        i.value.points[0].LatLng.longitude
-                    )
+                    i.value.data.points.first.toGeoPoint()
                 )
                 line.addPoint(
-                    GeoPoint(
-                        i.value.points[1].LatLng.latitude,
-                        i.value.points[1].LatLng.longitude
-                    )
+                    i.value.data.points.second.toGeoPoint()
                 )
                 next.add(line)
             }
@@ -153,7 +149,7 @@ class OsmMap : Fragment(), MapListener, Marker.OnMarkerClickListener {
             val next = FolderOverlay()
             for (i in it) {
 
-                val iconRes = when (i.value.team) {
+                val iconRes = when (i.value.data.team) {
                     "E" -> {
                         R.drawable.ic_green_portal
                     }
@@ -166,12 +162,12 @@ class OsmMap : Fragment(), MapListener, Marker.OnMarkerClickListener {
                 }
                 val polygon = Polygon(mMap)
                 polygon.infoWindow = null
-                val color = if (i.value.team == "E") {
+                val color = if (i.value.data.team == "E") {
                     Color.argb(100, 0, 255, 0)
                 } else {
                     Color.argb(100, 0, 0, 255)
                 }
-                val strokeColor = if (i.value.team == "E") {
+                val strokeColor = if (i.value.data.team == "E") {
                     Color.GREEN
                 } else {
                     Color.BLUE
@@ -181,22 +177,13 @@ class OsmMap : Fragment(), MapListener, Marker.OnMarkerClickListener {
                 polygon.strokeColor = strokeColor
                 polygon.strokeWidth = 2f
                 polygon.addPoint(
-                    GeoPoint(
-                        i.value.points[0].LatLng.latitude,
-                        i.value.points[0].LatLng.longitude
-                    )
+                    i.value.data.points.first.toGeoPoint()
                 )
                 polygon.addPoint(
-                    GeoPoint(
-                        i.value.points[1].LatLng.latitude,
-                        i.value.points[1].LatLng.longitude
-                    )
+                    i.value.data.points.second.toGeoPoint()
                 )
                 polygon.addPoint(
-                    GeoPoint(
-                        i.value.points[2].LatLng.latitude,
-                        i.value.points[2].LatLng.longitude
-                    )
+                    i.value.data.points.third.toGeoPoint()
                 )
 
                 next.add(polygon)
@@ -270,8 +257,8 @@ class OsmMap : Fragment(), MapListener, Marker.OnMarkerClickListener {
     }
 
     override fun onMarkerClick(marker: Marker?, mapView: MapView?): Boolean {
-        if (marker?.relatedObject is Portal) {
-            mapViewModel.selectPortal(marker.relatedObject as Portal)
+        if (marker?.relatedObject is PortalData) {
+            mapViewModel.selectPortal(marker.relatedObject as GameEntity.Portal)
             return true
         }
         return true
