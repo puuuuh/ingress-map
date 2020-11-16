@@ -40,4 +40,15 @@
         </ListPreference>
     </PreferenceCategory>
 
+    <PreferenceCategory app:title="Theme">
+        <ListPreference
+            app:defaultValue="-1"
+            app:entries="@array/themes"
+            app:entryValues="@array/themes_values"
+            app:key="THEME"
+            app:title="App theme">
+
+        </ListPreference>
+    </PreferenceCategory>
+
 </PreferenceScreen>

@@ -14,7 +14,8 @@
         android:adjustViewBounds="true"
         android:paddingBottom="15dp"
         android:scaleType="fitCenter"
-        android:layout_gravity="center" />
+        android:layout_gravity="center"
+        android:contentDescription="@string/portal_picture_desc" />
 
     <LinearLayout
         android:layout_width="wrap_content"
@@ -29,28 +30,29 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:paddingRight="4dp"
-                android:text="@string/portal_name_label" />
+                android:paddingEnd="4dp"
+                android:text="@string/portal_name_label"
+                tools:ignore="RtlSymmetry" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Level:" />
+                android:text="@string/portal_level_label" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Energy:" />
+                android:text="@string/portal_energy_label" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/owner_label" />
+                android:text="@string/portal_owner_label" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/team_label" />
+                android:text="@string/portal_team_label" />
 
         </LinearLayout>
 
@@ -95,13 +97,20 @@
         </LinearLayout>
     </LinearLayout>
 
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/resonators_header_label" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical">
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_gravity="center"
             android:orientation="horizontal">
 
             <TextView
@@ -116,8 +125,9 @@
             <ProgressBar
                 android:id="@+id/portal1"
                 style="?android:attr/progressBarStyleHorizontal"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:layout_width="0dp"
+                android:layout_gravity="center"
                 android:layout_weight="1"/>
 
         </LinearLayout>
@@ -138,14 +148,16 @@
             <ProgressBar
                 android:id="@+id/portal2"
                 style="?android:attr/progressBarStyleHorizontal"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:layout_width="0dp"
+                android:layout_gravity="center"
                 android:layout_weight="1"/>
 
         </LinearLayout>
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_gravity="center"
             android:orientation="horizontal">
 
             <TextView
@@ -156,17 +168,20 @@
                 android:layout_weight="1"
                 android:maxLines="1"
                 android:minLines="1"/>
+
             <ProgressBar
                 android:id="@+id/portal3"
                 style="?android:attr/progressBarStyleHorizontal"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_gravity="center"
                 android:layout_width="0dp"
-                android:layout_weight="1"/>
+                android:layout_weight="1" />
 
         </LinearLayout>
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_gravity="center"
             android:orientation="horizontal">
 
             <TextView
@@ -181,14 +196,16 @@
             <ProgressBar
                 android:id="@+id/portal4"
                 style="?android:attr/progressBarStyleHorizontal"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:layout_width="0dp"
+                android:layout_gravity="center"
                 android:layout_weight="1"/>
 
         </LinearLayout>
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_gravity="center"
             android:orientation="horizontal">
 
             <TextView
@@ -203,14 +220,16 @@
             <ProgressBar
                 android:id="@+id/portal5"
                 style="?android:attr/progressBarStyleHorizontal"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:layout_width="0dp"
+                android:layout_gravity="center"
                 android:layout_weight="1"/>
 
         </LinearLayout>
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_gravity="center"
             android:orientation="horizontal">
 
             <TextView
@@ -225,14 +244,16 @@
             <ProgressBar
                 android:id="@+id/portal6"
                 style="?android:attr/progressBarStyleHorizontal"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:layout_width="0dp"
+                android:layout_gravity="center"
                 android:layout_weight="1"/>
 
         </LinearLayout>
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_gravity="center"
             android:orientation="horizontal">
 
             <TextView
@@ -247,14 +268,16 @@
             <ProgressBar
                 android:id="@+id/portal7"
                 style="?android:attr/progressBarStyleHorizontal"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:layout_width="0dp"
+                android:layout_gravity="center"
                 android:layout_weight="1"/>
 
         </LinearLayout>
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_gravity="center"
             android:orientation="horizontal">
 
             <TextView
@@ -269,8 +292,9 @@
             <ProgressBar
                 android:id="@+id/portal8"
                 style="?android:attr/progressBarStyleHorizontal"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:layout_width="0dp"
+                android:layout_gravity="center"
                 android:layout_weight="1"/>
         </LinearLayout>
     </LinearLayout>

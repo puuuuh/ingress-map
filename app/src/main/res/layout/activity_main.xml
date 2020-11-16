@@ -18,6 +18,7 @@
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:layout_gravity="start"
-        android:fitsSystemWindows="true"
+        android:fitsSystemWindows="false"
+        android:theme="@style/AppTheme.NavigationDrawer"
         app:headerLayout="@layout/nav_header_main" />
 </androidx.drawerlayout.widget.DrawerLayout>

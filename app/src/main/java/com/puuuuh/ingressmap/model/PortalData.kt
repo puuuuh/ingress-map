@@ -44,7 +44,6 @@ class PortalDeserializer : JsonDeserializer<PortalData> {
         val lat = entityData[2].asDouble / 1000000
         val lng = entityData[3].asDouble / 1000000
         val lvl = entityData[4].asInt
-        val energy = entityData[5].asInt / 1000000
 
         val pic = if (entityData[7].isJsonNull) {
             ""
@@ -63,11 +62,13 @@ class PortalDeserializer : JsonDeserializer<PortalData> {
                 context.deserialize<Resonator>(it, Resonator::class.java)
             }
 
+            val energy = resonators.sumOf { it.energy }
+
             val owner = entityData[16].asString
             return PortalData(lat, lng, lvl, energy, pic, name, team, mods, resonators, owner)
         }
 
-        return PortalData(lat, lng, lvl, energy, pic, name, team)
+        return PortalData(lat, lng, lvl, 0, pic, name, team)
     }
 
 }

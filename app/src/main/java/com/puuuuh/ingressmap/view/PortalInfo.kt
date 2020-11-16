@@ -105,11 +105,11 @@ class PortalInfo : DialogFragment() {
         })
 
         viewModel.energy.observe(viewLifecycleOwner, Observer {
-            energyView.text = it.toString()
+            energyView.text = String.format(getString(R.string.portal_energy), it)
         })
 
         // TODO: change to listview or something like that asap
-        viewModel.resonators.observe(viewLifecycleOwner, Observer {
+        viewModel.resonators.observe(viewLifecycleOwner, {
             it.getOrNull(0)?.let { data ->
                 portalOwner1.text = data.owner
                 portal1.max = lvlToEnergy[data.level - 1]

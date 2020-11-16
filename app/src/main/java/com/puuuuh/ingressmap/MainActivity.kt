@@ -48,7 +48,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Settings.init(this)
         setContentView(R.layout.activity_main)
 
         if (intent.action == Intent.ACTION_VIEW && intent.dataString != null) {
@@ -79,50 +78,34 @@ class MainActivity : AppCompatActivity() {
         val navView: NavigationView = findViewById(R.id.nav_view)
         val navController = findNavController(R.id.main_fragment)
 
+        navView.inflateMenu(R.menu.drawer_map)
+        val graph = navController.navInflater.inflate(R.navigation.navgraph_map)
+
+        if (Settings.mapProvider == "osm") {
+            navView.menu.getItem(1).isVisible = false
+            graph.startDestination = R.id.nav_osmmap
+        } else {
+            navView.menu.getItem(0).isVisible = false
+            graph.startDestination = R.id.nav_map
+        }
+
+        navController.graph = graph
+
+        appBarConfiguration = AppBarConfiguration(
+            setOf(
+                R.id.nav_osmmap,
+                R.id.nav_map
+            ), drawerLayout
+        )
+
+        setupActionBarWithNavController(navController, appBarConfiguration)
+        navView.setupWithNavController(navController)
 
 
         Settings.liveToken.observe(this, {
             if (it == "") {
                 startLogin()
             }
-        })
-
-        Settings.liveMapProvider.observe(this, {
-            navView.menu.clear()
-            appBarConfiguration = if (it == "osm") {
-                navView.inflateMenu(R.menu.drawer_osm)
-                navController.setGraph(R.navigation.navgraph_osm)
-                AppBarConfiguration(
-                    setOf(
-                        R.id.nav_osmmap
-                    ), drawerLayout
-                )
-            } else {
-                navView.inflateMenu(R.menu.drawer_gmap)
-                navController.setGraph(R.navigation.navgraph_gmaps)
-                AppBarConfiguration(
-                    setOf(
-                        R.id.nav_map
-                    ), drawerLayout
-                )
-            }
-
-            setupActionBarWithNavController(navController, appBarConfiguration)
-            navView.setupWithNavController(navController)
-            /*if (it == null) {
-                return@Observer
-            }
-            val mStartActivity = Intent(this, MainActivity::class.java)
-            val mPendingIntentId = 123456
-            val mPendingIntent = PendingIntent.getActivity(
-                this,
-                mPendingIntentId,
-                mStartActivity,
-                PendingIntent.FLAG_CANCEL_CURRENT
-            )
-            (this.getSystemService(Context.ALARM_SERVICE) as AlarmManager)[AlarmManager.RTC, System.currentTimeMillis() + 100] =
-                mPendingIntent
-            exitProcess(0)*/
         })
 
         mapViewModel.selectedPortal.observe(

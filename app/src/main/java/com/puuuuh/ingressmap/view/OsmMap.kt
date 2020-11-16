@@ -232,6 +232,14 @@ class OsmMap : Fragment(), MapListener, Marker.OnMarkerClickListener {
             prevCells = next
             mMap.invalidate()
         })
+
+        mapViewModel.status.observe(viewLifecycleOwner, {
+            statusView.text = if (it.requestsInProgress == 0) {
+                getString(R.string.status_ok)
+            } else {
+                String.format(getString(R.string.status_in_progress), it.requestsInProgress)
+            }
+        })
     }
 
     override fun onScroll(e: ScrollEvent?): Boolean {

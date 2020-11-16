@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="AppTheme.NavigationDrawer" parent="AppTheme">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimaryDark">#252525</item>
+        <item name="colorPrimary">#FFFFFF</item>
+    </style>
+</resources>

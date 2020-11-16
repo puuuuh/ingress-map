@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="team_label">Team:</string>
-    <string name="owner_label">Owner:</string>
+    <string name="portal_team_label">Team:</string>
+    <string name="portal_owner_label">Owner:</string>
     <string name="portal_name_label">Portal name: </string>
 </resources>

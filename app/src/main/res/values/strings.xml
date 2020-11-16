@@ -24,8 +24,17 @@
     <string name="show_links">Show links</string>
     <string name="show_fields">Show fields</string>
     <string name="show_cells">Show cells</string>
+
+    <!-- Map -->
     <string name="status_ok">Status: up to date</string>
     <string name="status_in_progress">Status: %d requests in progress, please, wait…</string>
+
+    <!-- Portal Info -->
+    <string name="portal_energy">%d XM</string>
+    <string name="portal_level_label">Level:</string>
+    <string name="portal_energy_label">Energy:</string>
+    <string name="portal_picture_desc">Portal picture</string>
+    <string name="resonators_header_label">Resonators:</string>
 
     <string-array name="map_providers">
         <item>Google map</item>
@@ -34,5 +43,16 @@
     <string-array name="map_providers_values">
         <item />
         <item>osm</item>
+    </string-array>
+
+    <string-array name="themes">
+        <item>System</item>
+        <item>Light</item>
+        <item>Dark</item>
+    </string-array>
+    <string-array name="themes_values">
+        <item>-1</item>
+        <item>1</item>
+        <item>2</item>
     </string-array>
 </resources>

@@ -21,24 +21,20 @@ object Settings {
     private const val MY_LOCATION = "MY_LOCATION"
     private const val API_VERSION = "API_VERSION"
     private const val MAP_PROVIDER = "MAP_PROVIDER"
+    private const val THEME = "THEME"
 
     private var mSharedPref: SharedPreferences? = null
 
     private val _liveToken = MutableLiveData<String>()
     val liveToken: LiveData<String> = _liveToken
 
-    private val _liveMapProvider = MutableLiveData<String>()
-    val liveMapProvider: LiveData<String> = _liveMapProvider
-
     fun init(context: Context) {
         mSharedPref = PreferenceManager.getDefaultSharedPreferences(context)
         _liveToken.value = this.token
-        _liveMapProvider.value = this.mapProvider
 
         mSharedPref!!.registerOnSharedPreferenceChangeListener { _: SharedPreferences, s: String ->
             when (s) {
                 TOKEN -> _liveToken.value = this.token
-                MAP_PROVIDER -> _liveMapProvider.value = this.mapProvider
             }
         }
     }
@@ -149,6 +145,16 @@ object Settings {
         set(value) {
             mSharedPref?.edit()
                 ?.putString(MAP_PROVIDER, value)
+                ?.apply()
+        }
+
+    var theme: Int
+        get() {
+            return Integer.parseInt(mSharedPref?.getString(THEME, "-1")!!)
+        }
+        set(value) {
+            mSharedPref?.edit()
+                ?.putString(THEME, value.toString())
                 ?.apply()
         }
 }

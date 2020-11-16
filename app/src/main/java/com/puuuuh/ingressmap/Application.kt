@@ -2,9 +2,11 @@ package com.puuuuh.ingressmap
 
 import android.app.Application
 import android.content.Context
+import androidx.appcompat.app.AppCompatDelegate
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.puuuuh.ingressmap.model.*
+import com.puuuuh.ingressmap.settings.Settings
 
 // Not object class. AndroidManifest.xml error happen.
 class MainApplication : Application() {
@@ -32,10 +34,8 @@ class MainApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        // initialize for any
-
-        // Use ApplicationContext.
-        // example: SharedPreferences etc...
-        val context: Context = applicationContext()
+        val context = applicationContext()
+        Settings.init(context)
+        AppCompatDelegate.setDefaultNightMode(Settings.theme)
     }
 }
