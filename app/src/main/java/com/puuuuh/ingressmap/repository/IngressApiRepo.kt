@@ -9,9 +9,12 @@ import com.puuuuh.ingressmap.utils.AuthInterceptor
 import okhttp3.*
 import java.io.IOException
 import java.net.URL
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentMap
 
 interface OnDataReadyCallback {
     fun onCellDataReceived(
+        seq: Int,
         cellId: String, portals: Map<String, GameEntity.Portal>,
         links: Map<String, GameEntity.Link>,
         fields: Map<String, GameEntity.Field>
@@ -56,6 +59,8 @@ data class CacheEntry(
 )
 
 class IngressApiRepo {
+    var cache: ConcurrentMap<String, CacheEntry> = ConcurrentHashMap()
+
     var okHttpClient: OkHttpClient = OkHttpClient()
 
     init {
@@ -102,7 +107,22 @@ class IngressApiRepo {
         })
     }
 
-    fun getTilesInfo(tiles: List<String>, callback: OnDataReadyCallback, retry: Int = 0) {
+    fun getTilesInfo(seq: Int, tiles: List<String>, callback: OnDataReadyCallback, retry: Int = 0) {
+        if (retry == 0) {
+            tiles.forEach {
+                val cached = cache[it]
+                if (cached != null) {
+                    callback.onCellDataReceived(
+                        seq,
+                        it,
+                        cached.portals,
+                        cached.links,
+                        cached.fields
+                    )
+                }
+            }
+        }
+
         if (retry > 4) {
             return
         }
@@ -115,7 +135,7 @@ class IngressApiRepo {
 
         apiCall("getEntities", payload, object : Callback {
             override fun onFailure(call: Call?, e: IOException?) {
-                getTilesInfo(tiles, callback, retry + 1)
+                getTilesInfo(seq, tiles, callback, retry + 1)
                 callback.onRequestEnd()
             }
 
@@ -124,7 +144,7 @@ class IngressApiRepo {
                     tiles.withIndex()
                         .groupBy { it.index / (tiles.size / 2) }
                         .map {
-                            getTilesInfo(it.value.map { it.value }, callback, retry)
+                            getTilesInfo(seq, it.value.map { it.value }, callback, retry)
                         }
                     callback.onRequestEnd()
                     return
@@ -159,10 +179,18 @@ class IngressApiRepo {
                                 }
                             }
                         }
-                        callback.onCellDataReceived(es.key, portals, links, fields)
+                        val cached = cache[es.key]
+                        if (cached == null ||
+                            cached.portals.count() != portals.count() ||
+                            cached.links.count() != links.count() ||
+                            cached.fields.count() != fields.count()
+                        ) {
+                            cache[es.key] = CacheEntry(portals, links, fields)
+                            callback.onCellDataReceived(seq, es.key, portals, links, fields)
+                        }
                     }
                     if (next.isNotEmpty()) {
-                        getTilesInfo(next, callback, retry + 1)
+                        getTilesInfo(seq, next, callback, retry + 1)
                     }
                 } catch (e: Exception) {
                     Log.e("IngressApiRepo", e.message ?: "")

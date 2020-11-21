@@ -14,19 +14,17 @@ import com.puuuuh.ingressmap.model.LinkData
 import com.puuuuh.ingressmap.model.Point
 import com.puuuuh.ingressmap.repository.*
 import com.puuuuh.ingressmap.settings.Settings
+import com.puuuuh.ingressmap.utils.throttleLatest
 import com.puuuuh.ingressmap.utils.toLatLng
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.collections.HashMap
 import kotlin.math.*
 
-data class CellData(
-    val portals: Map<String, GameEntity.Portal>,
-    val links: Map<String, GameEntity.Link>,
-    val fields: Map<String, GameEntity.Field>
-)
+
 
 data class Status(val requestsInProgress: Int)
 
@@ -46,11 +44,22 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
     private val portalsRepo = PortalsRepo()
     private val cellsRepo = S2CellsRepo()
     private val handler = Handler(context.mainLooper)
+    private val localPortals = ConcurrentHashMap<String, GameEntity.Portal>()
+    private val localLinks = ConcurrentHashMap<String, GameEntity.Link>()
+    private val localFields = ConcurrentHashMap<String, GameEntity.Field>()
+    private val seq = AtomicInteger(0)
+    private val throttleUpdate = throttleLatest<Unit>(500, GlobalScope) {
+        if (Settings.showPortals) {
+            _portals.postValue(localPortals)
+        }
+        if (Settings.showLinks) {
+            _links.postValue(localLinks)
+        }
 
-    // All cached entities
-    private val allPortals = ConcurrentHashMap<String, GameEntity.Portal>()
-    private val allLinks = ConcurrentHashMap<String, GameEntity.Link>()
-    private val allFields = ConcurrentHashMap<String, GameEntity.Field>()
+        if (Settings.showFields) {
+            _fields.postValue(localFields)
+        }
+    }
 
     // Current viewport
     private var viewport = LatLngBounds(LatLng(0.0, 0.0), LatLng(0.0, 0.0))
@@ -88,8 +97,6 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
     private val _selectedPortal = MutableLiveData<GameEntity.Portal?>()
     val selectedPortal: LiveData<GameEntity.Portal?> = _selectedPortal
 
-    private val _cellCache = mutableMapOf<String, CellData>()
-
     init {
         _customLines.value = emptyMap()
         _targetPosition.value = Settings.lastPosition
@@ -112,40 +119,21 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
         zoom = z
 
         GlobalScope.launch {
+            seq.incrementAndGet()
+            localPortals.clear()
+            localLinks.clear()
+            localFields.clear()
             updateCellsInRegion(r, z)
             if (Settings.showCells) {
                 cellsRepo.getCells(r, z, this@MapViewModel)
             } else if (cellLines.value?.isNotEmpty() != false) {
                 _cellLines.postValue(emptyMap())
             }
-            updateVisibleLinks()
-            updateVisiblePortals()
-            updateVisibleFields()
         }
     }
 
     fun moveCamera(r: LatLng) {
         _targetPosition.postValue(r)
-    }
-
-    private fun updateVisibleFields() {
-        val new = if (!Settings.showFields || zoom < 13) {
-            mapOf()
-        } else {
-            allFields.filter { field -> field.value.data.bounds.intersects(viewport) }
-        }
-        if (new != _fields.value)
-            _fields.postValue(new)
-    }
-
-    private fun updateVisibleLinks() {
-        val new = if (!Settings.showLinks || zoom < 14) {
-            mapOf()
-        } else {
-            allLinks.filter { link -> link.value.data.bounds.intersects(viewport) }
-        }
-        if (new != _links.value)
-            _links.postValue(new)
     }
 
     private fun LatLngBounds.intersects(viewport: LatLngBounds): Boolean {
@@ -192,16 +180,6 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
         }
 
         return false
-    }
-
-    private fun updateVisiblePortals() {
-        val new = if (!Settings.showPortals || zoom < 13.5) {
-            mapOf()
-        } else {
-            allPortals.filter { viewport.contains(LatLng(it.value.data.lat, it.value.data.lng)) }
-        }
-        if (new != _portals.value)
-            _portals.postValue(new)
     }
 
     fun selectPortal(value: GameEntity.Portal?) {
@@ -296,94 +274,45 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
     }
 
     override fun onCellDataReceived(
+        seq: Int,
         cellId: String,
         portals: Map<String, GameEntity.Portal>,
         links: Map<String, GameEntity.Link>,
         fields: Map<String, GameEntity.Field>
     ) {
-        val cachedVersion = _cellCache[cellId]
-        var updates = 0
-        if (cachedVersion != null) {
-            val removedPortals = cachedVersion.portals.keys.minus(portals.keys)
-            removedPortals.map {
-                portalsRepo.delete(it)
-                allPortals.remove(it)
-            }
-            updates += removedPortals.size
-            for (p in portals) {
-                val old = allPortals[p.key]
-                if (old != p.value) {
-                    portalsRepo.add(
-                        PortalDto(
-                            p.key,
-                            p.value.data.name,
-                            p.value.data.lat,
-                            p.value.data.lng
-                        )
-                    )
-                    allPortals[p.key] = p.value
-                    updates++
-                }
-            }
-
-            val removedLinks = cachedVersion.links.keys.minus(links.keys)
-            removedLinks.map { allLinks.remove(it) }
-            updates += removedLinks.size
-            for (p in links) {
-                val old = allLinks[p.key]
-                if (old != p.value) {
-                    allLinks[p.key] = p.value
-                    updates++
-                }
-            }
-
-            val removedFields = cachedVersion.fields.keys.minus(fields.keys)
-            removedFields.map { allFields.remove(it) }
-            updates += removedFields.size
-            for (p in fields) {
-                val old = allFields[p.key]
-                if (old != p.value) {
-                    allFields[p.key] = p.value
-                    updates++
-                }
-            }
-        } else {
-            for (p in portals) {
-                val old = allPortals[p.key]
-                if (old != p.value) {
-                    portalsRepo.add(
-                        PortalDto(
-                            p.key,
-                            p.value.data.name,
-                            p.value.data.lat,
-                            p.value.data.lng
-                        )
-                    )
-                    allPortals[p.key] = p.value
-                    updates++
-                }
-            }
-            for (p in links) {
-                val old = allLinks[p.key]
-                if (old != p.value) {
-                    allLinks[p.key] = p.value
-                    updates++
-                }
-            }
-            for (p in fields) {
-                val old = allFields[p.key]
-                if (old != p.value) {
-                    allFields[p.key] = p.value
-                    updates++
-                }
-            }
+        if (seq != this.seq.get()) {
+            return
         }
-        _cellCache[cellId] = CellData(portals, links, fields)
-        if (updates > 0) {
-            updateVisibleFields()
-            updateVisibleLinks()
-            updateVisiblePortals()
+        for (p in portals) {
+            portalsRepo.add(
+                PortalDto(
+                    p.key,
+                    p.value.data.name,
+                    p.value.data.lat,
+                    p.value.data.lng
+                )
+            )
         }
+
+        if (Settings.showPortals) {
+            localPortals.putAll(portals.filter {
+                viewport.contains(
+                    LatLng(
+                        it.value.data.lat,
+                        it.value.data.lng
+                    )
+                )
+            })
+        }
+        if (Settings.showLinks) {
+            localLinks.putAll(links.filter { it.value.data.bounds.intersects(viewport) })
+        }
+
+        if (Settings.showFields) {
+            localFields.putAll(fields.filter { it.value.data.bounds.intersects(viewport) })
+        }
+
+        throttleUpdate(Unit)
     }
 
     override fun onRequestStart() {
@@ -411,9 +340,13 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
     }
 
     private fun updateCellsInRegion(region: LatLngBounds, zoom: Int) {
-        val targetZoom = if (zoom < 13) zoom else 21
-        val zoomToLevel = arrayOf(8,8,8,8,7,7,7,6,6,5,4,4,3,2,2,1,1)
-        val level = if(targetZoom >= zoomToLevel.size) { 0 } else { zoomToLevel[targetZoom] }
+        val targetZoom = zoom
+        val zoomToLevel = arrayOf(8, 8, 8, 8, 8, 8, 8, 8, 7, 7, 6, 6, 5, 5, 4, 3, 2, 1, 1, 1)
+        val level = if (zoom >= zoomToLevel.size) {
+            0
+        } else {
+            zoomToLevel[zoom]
+        }
         val ne = getXYTile(
             region.northeast.latitude,
             region.northeast.longitude,
@@ -430,10 +363,11 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
                 tiles.add("${targetZoom}_${x}_${y}_${level}_8_100")
             }
         }
+        val seq = seq.get()
         tiles.withIndex()
             .groupBy { it.index / 20 }
-            .map {
-                ingressRepo.getTilesInfo(it.value.map { it.value }, this)
+            .map { it ->
+                ingressRepo.getTilesInfo(seq, it.value.map { it.value }, this)
             }
     }
 }

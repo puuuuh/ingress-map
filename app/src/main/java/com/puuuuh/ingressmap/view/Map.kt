@@ -107,7 +107,7 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
                         .anchor(0.5f, 0.5f)
                     newPortals[i.key] = Pair(
                         mMap.addMarker(m),
-                        if (mMap.cameraPosition.zoom > 16) {
+                        if (mMap.cameraPosition.zoom > 18) {
                             val oreol = CircleOptions()
                                 .center(pos)
                                 .radius(20.0)
@@ -127,14 +127,14 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
                     if ((old.first.tag as GameEntity.Portal).data.team != i.value.data.team) {
                         old.first.setIcon(BitmapDescriptorFactory.fromResource(iconRes))
                     }
-                    if (mMap.cameraPosition.zoom > 16 && old.second == null) {
+                    if (mMap.cameraPosition.zoom > 18 && old.second == null) {
                         val oreol = CircleOptions()
                             .center(pos)
                             .radius(20.0)
                             .fillColor(0x77303030)
                             .strokeWidth(0.0F)
                         newPortals[i.key] = Pair(old.first, mMap.addCircle(oreol))
-                    } else if (mMap.cameraPosition.zoom <= 16 && old.second != null) {
+                    } else if (mMap.cameraPosition.zoom <= 18 && old.second != null) {
                         old.second!!.remove()
                         newPortals[i.key] = Pair(old.first, null)
                     } else {

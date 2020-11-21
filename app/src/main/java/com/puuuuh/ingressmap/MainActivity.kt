@@ -26,12 +26,14 @@ import com.puuuuh.ingressmap.model.PortalData
 import com.puuuuh.ingressmap.repository.PlacesRepository
 import com.puuuuh.ingressmap.repository.PortalsRepo
 import com.puuuuh.ingressmap.settings.Settings
+import com.puuuuh.ingressmap.utils.throttleLatest
 import com.puuuuh.ingressmap.view.LoginActivity
 import com.puuuuh.ingressmap.view.PortalInfo
 import com.puuuuh.ingressmap.viewmodel.MapViewModel
 import com.puuuuh.ingressmap.viewmodel.ViewmodelFactory
 import kotlinx.android.synthetic.main.search_switch.*
-import kotlinx.coroutines.*
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 
 class MainActivity : AppCompatActivity() {
@@ -120,23 +122,6 @@ class MainActivity : AppCompatActivity() {
             })
     }
 
-    private fun <T> throttleLatest(
-        intervalMs: Long = 300L,
-        coroutineScope: CoroutineScope,
-        destinationFunction: (T) -> Unit
-    ): (T) -> Unit {
-        var throttleJob: Job? = null
-        var latestParam: T
-        return { param: T ->
-            latestParam = param
-            if (throttleJob?.isCompleted != false) {
-                throttleJob = coroutineScope.launch {
-                    delay(intervalMs)
-                    latestParam.let(destinationFunction)
-                }
-            }
-        }
-    }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.main_menu, menu)
