@@ -48,7 +48,7 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
     private val localLinks = ConcurrentHashMap<String, GameEntity.Link>()
     private val localFields = ConcurrentHashMap<String, GameEntity.Field>()
     private val seq = AtomicInteger(0)
-    private val throttleUpdate = throttleLatest<Unit>(500, GlobalScope) {
+    private val throttleUpdate = throttleLatest<Unit>(250, GlobalScope) {
         if (Settings.showPortals) {
             _portals.postValue(localPortals)
         }
@@ -283,6 +283,7 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
         if (seq != this.seq.get()) {
             return
         }
+        var changes = 0
         for (p in portals) {
             portalsRepo.add(
                 PortalDto(
@@ -295,22 +296,34 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
         }
 
         if (Settings.showPortals) {
-            localPortals.putAll(portals.filter {
+            val uniquePortals = portals.filter {
                 viewport.contains(
                     LatLng(
                         it.value.data.lat,
                         it.value.data.lng
                     )
-                )
-            })
+                ) && !localPortals.containsKey(it.key)
+            }
+            changes += uniquePortals.count()
+            localPortals.putAll(uniquePortals)
         }
         if (Settings.showLinks) {
-            localLinks.putAll(links.filter { it.value.data.bounds.intersects(viewport) })
+            val uniqueLinks = links.filter {
+                it.value.data.bounds.intersects(viewport) && !localLinks.containsKey(it.key)
+            }
+            changes += uniqueLinks.count()
+            localLinks.putAll(uniqueLinks)
         }
 
         if (Settings.showFields) {
-            localFields.putAll(fields.filter { it.value.data.bounds.intersects(viewport) })
+            val uniqueFields = fields.filter {
+                it.value.data.bounds.intersects(viewport) && !localFields.containsKey(it.key)
+            }
+            changes += uniqueFields.count()
+            localFields.putAll(uniqueFields)
         }
+
+        if (changes <= 0) return
 
         throttleUpdate(Unit)
     }

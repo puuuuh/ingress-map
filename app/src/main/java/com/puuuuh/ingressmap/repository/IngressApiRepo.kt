@@ -179,15 +179,7 @@ class IngressApiRepo {
                                 }
                             }
                         }
-                        val cached = cache[es.key]
-                        if (cached == null ||
-                            cached.portals.count() != portals.count() ||
-                            cached.links.count() != links.count() ||
-                            cached.fields.count() != fields.count()
-                        ) {
-                            cache[es.key] = CacheEntry(portals, links, fields)
-                            callback.onCellDataReceived(seq, es.key, portals, links, fields)
-                        }
+                        callback.onCellDataReceived(seq, es.key, portals, links, fields)
                     }
                     if (next.isNotEmpty()) {
                         getTilesInfo(seq, next, callback, retry + 1)
