@@ -36,7 +36,7 @@ data class GetPortalDataPayload(val guid: String) {
     val v = Settings.apiVersion
 }
 
-data class GetEntitiesResponse (
+data class GetEntitiesResponse(
     val result: EntitiesMap
 ) {
     data class EntitiesMap(
@@ -69,10 +69,11 @@ class IngressApiRepo {
             .build()
     }
 
-    private fun apiCall(method: String, payload: String, cb: Callback) {
+    private fun apiCall(method: String, payload: String, cb: Callback, seq: Int = Int.MAX_VALUE) {
         val r = Request.Builder()
             .url(URL("https://intel.ingress.com/r/$method"))
             .post(RequestBody.create(MediaType.parse("application/json; charset=UTF-8"), payload))
+            .tag(seq)
             .build()
         okHttpClient.newCall(r).enqueue(cb)
     }
@@ -108,6 +109,15 @@ class IngressApiRepo {
     }
 
     fun getTilesInfo(seq: Int, tiles: List<String>, callback: OnDataReadyCallback, retry: Int = 0) {
+        try {
+            for (call in okHttpClient.dispatcher().queuedCalls()) {
+                if ((call.request().tag() as Int) < seq)
+                    call.cancel()
+            }
+        } catch (e: Exception) {
+            Log.e("IngressApiRepo", e.message ?: "")
+        }
+
         if (retry == 0) {
             tiles.forEach {
                 val cached = cache[it]
@@ -189,6 +199,6 @@ class IngressApiRepo {
                 }
                 callback.onRequestEnd()
             }
-        })
+        }, seq)
     }
 }
