@@ -6,7 +6,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 fun <T> throttleLatest(
-    intervalMs: Long = 300L,
+    intervalMs: Long = 100L,
     coroutineScope: CoroutineScope,
     destinationFunction: (T) -> Unit
 ): (T) -> Unit {

@@ -189,6 +189,8 @@ class IngressApiRepo {
                                 }
                             }
                         }
+
+                        cache[es.key] = CacheEntry(portals, links, fields)
                         callback.onCellDataReceived(seq, es.key, portals, links, fields)
                     }
                     if (next.isNotEmpty()) {

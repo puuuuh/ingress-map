@@ -48,7 +48,7 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
     private val localLinks = ConcurrentHashMap<String, GameEntity.Link>()
     private val localFields = ConcurrentHashMap<String, GameEntity.Field>()
     private val seq = AtomicInteger(0)
-    private val throttleUpdate = throttleLatest<Unit>(250, GlobalScope) {
+    private val throttleUpdate = throttleLatest<Unit>(200, GlobalScope) {
         if (Settings.showPortals) {
             _portals.postValue(localPortals)
         }
