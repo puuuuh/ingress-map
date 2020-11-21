@@ -154,9 +154,9 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
             for (i in data) {
                 val old = links.remove(i.key)
                 val color = if (i.value.data.team == "E") {
-                    Color.GREEN
+                    Color.argb(255, 0, 255, 0)
                 } else {
-                    Color.BLUE
+                    Color.argb(255, 0, 140, 255)
                 }
 
                 if (old == null) {

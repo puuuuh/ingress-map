@@ -6,19 +6,16 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 fun <T> throttleLatest(
-    intervalMs: Long = 300L,
+    waitMs: Long = 300L,
     coroutineScope: CoroutineScope,
     destinationFunction: (T) -> Unit
 ): (T) -> Unit {
-    var throttleJob: Job? = null
-    var latestParam: T
+    var debounceJob: Job? = null
     return { param: T ->
-        latestParam = param
-        if (throttleJob?.isCompleted != false) {
-            throttleJob = coroutineScope.launch {
-                delay(intervalMs)
-                latestParam.let(destinationFunction)
-            }
+        debounceJob?.cancel()
+        debounceJob = coroutineScope.launch {
+            delay(waitMs)
+            destinationFunction(param)
         }
     }
 }
