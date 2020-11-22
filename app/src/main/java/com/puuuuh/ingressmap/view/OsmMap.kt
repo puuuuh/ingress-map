@@ -68,8 +68,6 @@ class OsmMap : Fragment(), MapListener, Marker.OnMarkerClickListener {
         mMap.minZoomLevel = 3.toDouble()
         map.zoomController.setVisibility(CustomZoomButtonsController.Visibility.ALWAYS)
         map.setMultiTouchControls(true)
-        val mapController = map.controller
-        mapController.setZoom(Settings.lastZoom.toDouble())
         mMyLocation = MyLocationNewOverlay(GpsMyLocationProvider(context), mMap)
         mMap.overlays.add(mMyLocation)
         mMyLocation.enableMyLocation()
@@ -79,9 +77,9 @@ class OsmMap : Fragment(), MapListener, Marker.OnMarkerClickListener {
         var prev: FolderOverlay? = null
 
         mapViewModel.targetPosition.observe(viewLifecycleOwner, {
-            if (it.longitude != 0.0 && it.latitude != 0.0) {
-                mMap.controller.setCenter(GeoPoint(it.latitude, it.longitude))
-                mMap.controller.setZoom(17.toDouble())
+            if (it.lat != 0.0 && it.lng != 0.0) {
+                mMap.controller.setCenter(GeoPoint(it.lat, it.lng))
+                mMap.controller.setZoom(it.zoom.toDouble())
             }
         })
 

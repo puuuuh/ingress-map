@@ -18,12 +18,6 @@
             app:title="@string/show_cells" />
     </PreferenceCategory>
 
-    <PreferenceCategory app:title="@string/drawing_header">
-        <SwitchPreferenceCompat
-            app:key="DRAW_MODE"
-            app:title="@string/draw_enable" />
-    </PreferenceCategory>
-
     <PreferenceCategory app:title="@string/permissions_header">
         <SwitchPreferenceCompat
             app:key="MY_LOCATION"

@@ -1,6 +1,7 @@
 package com.puuuuh.ingressmap.viewmodel
 
 import android.content.Context
+import android.net.Uri
 import android.os.Handler
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -9,11 +10,13 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.common.geometry.S2CellId
-import com.puuuuh.ingressmap.model.GameEntity
-import com.puuuuh.ingressmap.model.LinkData
-import com.puuuuh.ingressmap.model.Point
+import com.puuuuh.ingressmap.MainApplication
+import com.puuuuh.ingressmap.model.*
 import com.puuuuh.ingressmap.repository.*
+import com.puuuuh.ingressmap.settings.FullPosition
 import com.puuuuh.ingressmap.settings.Settings
+import com.puuuuh.ingressmap.utils.area
+import com.puuuuh.ingressmap.utils.intersects
 import com.puuuuh.ingressmap.utils.throttleLatest
 import com.puuuuh.ingressmap.utils.toLatLng
 import kotlinx.coroutines.GlobalScope
@@ -23,7 +26,6 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.collections.HashMap
 import kotlin.math.*
-
 
 
 data class Status(val requestsInProgress: Int)
@@ -49,24 +51,19 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
     private val localFields = ConcurrentHashMap<String, GameEntity.Field>()
     private val seq = AtomicInteger(0)
     private val throttleUpdate = throttleLatest<Unit>(200, GlobalScope) {
-        if (Settings.showPortals) {
-            _portals.postValue(localPortals)
-        }
-        if (Settings.showLinks) {
-            _links.postValue(localLinks)
-        }
+        _portals.postValue(localPortals)
 
-        if (Settings.showFields) {
-            _fields.postValue(localFields)
-        }
+        _links.postValue(localLinks)
+
+        _fields.postValue(localFields)
     }
 
     // Current viewport
     private var viewport = LatLngBounds(LatLng(0.0, 0.0), LatLng(0.0, 0.0))
     private var zoom = 21
 
-    private val _targetPosition = MutableLiveData<LatLng>()
-    val targetPosition: LiveData<LatLng> = _targetPosition
+    private val _targetPosition = MutableLiveData<FullPosition>()
+    val targetPosition: LiveData<FullPosition> = _targetPosition
 
     private val _portals = MutableLiveData<Map<String, GameEntity.Portal>>()
     val portals: LiveData<Map<String, GameEntity.Portal>> = _portals
@@ -97,9 +94,28 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
     private val _selectedPortal = MutableLiveData<GameEntity.Portal?>()
     val selectedPortal: LiveData<GameEntity.Portal?> = _selectedPortal
 
+    private val zoomToLevel = arrayOf(8, 8, 8, 8, 7, 7, 6, 6, 5, 4, 4, 3, 2, 1, 1, 1, 1, 1, 1, 1)
+
+    private val zoomToArea = arrayOf(
+        10000000000000.0,
+        10000000000000.0,
+        10000000000000.0,
+        10000000000000.0,
+        10000000000000.0,
+        10000000000000.0,
+        10000000000000.0,
+        1000000000000.0,
+        100000000000.0,
+        10000000000.0,
+        1000000000.0,
+        100000000.0,
+        10000000.0,
+        1000000.0,
+        100000.0,
+    )
+
     init {
         _customLines.value = emptyMap()
-        _targetPosition.value = Settings.lastPosition
         val links = customPointRepo.getAll()
         links.observeForever { list ->
             list.map {
@@ -112,8 +128,7 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
     }
 
     fun updatePosition(pos: LatLng, r: LatLngBounds, z: Int) {
-        Settings.lastPosition = pos
-        Settings.lastZoom = z.toFloat()
+        Settings.lastPosition = FullPosition(pos.latitude, pos.longitude, z.toFloat())
 
         viewport = r
         zoom = z
@@ -132,54 +147,8 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
         }
     }
 
-    fun moveCamera(r: LatLng) {
+    fun moveCamera(r: FullPosition) {
         _targetPosition.postValue(r)
-    }
-
-    private fun LatLngBounds.intersects(viewport: LatLngBounds): Boolean {
-        val thisNorthWest = LatLng(this.northeast.latitude, this.southwest.longitude)
-        val thisSouthEast = LatLng(this.southwest.latitude, this.northeast.longitude)
-        val vpNorthWest = LatLng(viewport.northeast.latitude, viewport.southwest.longitude)
-        val vpSouthEast = LatLng(viewport.southwest.latitude, viewport.northeast.longitude)
-
-
-        if (viewport.contains(this.northeast) || viewport.contains(this.southwest) ||
-            viewport.contains(thisNorthWest) || viewport.contains(thisSouthEast) ||
-            this.contains(viewport.northeast) || this.contains(viewport.southwest) ||
-                this.contains(vpNorthWest) || this.contains(vpSouthEast)) {
-            return true
-        }
-
-        val vpLeft = viewport.southwest.longitude
-        val myLeft = this.southwest.longitude
-        var vpRight = viewport.northeast.longitude
-        var myRight = this.northeast.longitude
-
-        val vpUp = viewport.northeast.latitude
-        val myUp = this.northeast.latitude
-        val vpDown = viewport.southwest.latitude
-        val myDown = this.southwest.latitude
-
-        if (myRight < myLeft) {
-            myRight += 360
-        }
-        if (vpRight < vpLeft) {
-            vpRight += 360
-        }
-
-        if (myUp < vpUp &&
-            myDown > vpDown) {
-            return myLeft < vpLeft &&
-                    myRight > vpRight
-        }
-
-        if (myLeft > vpLeft &&
-            myRight < vpRight) {
-            return myUp > vpUp &&
-                    myDown < vpDown
-        }
-
-        return false
     }
 
     fun selectPortal(value: GameEntity.Portal?) {
@@ -284,6 +253,18 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
             return
         }
         var changes = 0
+        val level = if (zoom >= zoomToLevel.size) {
+            1
+        } else {
+            zoomToLevel[zoom]
+        }
+
+        val area: Double = if (zoom >= zoomToArea.size) {
+            0.0
+        } else {
+            zoomToArea[zoom]
+        }
+
         for (p in portals) {
             portalsRepo.add(
                 PortalDto(
@@ -302,7 +283,7 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
                         it.value.data.lat,
                         it.value.data.lng
                     )
-                ) && !localPortals.containsKey(it.key)
+                ) && !localPortals.containsKey(it.key) && it.value.data.lvl >= level
             }
             changes += uniquePortals.count()
             localPortals.putAll(uniquePortals)
@@ -317,13 +298,14 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
 
         if (Settings.showFields) {
             val uniqueFields = fields.filter {
-                it.value.data.bounds.intersects(viewport) && !localFields.containsKey(it.key)
+                val curArea = it.value.data.bounds.area()
+                it.value.data.bounds.intersects(viewport) &&
+                        !localFields.containsKey(it.key) &&
+                        curArea >= area
             }
             changes += uniqueFields.count()
             localFields.putAll(uniqueFields)
         }
-
-        if (changes <= 0) return
 
         throttleUpdate(Unit)
     }
@@ -354,7 +336,6 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
 
     private fun updateCellsInRegion(region: LatLngBounds, zoom: Int) {
         val targetZoom = zoom
-        val zoomToLevel = arrayOf(8, 8, 8, 8, 8, 8, 8, 8, 7, 7, 6, 6, 5, 5, 4, 3, 2, 1, 1, 1)
         val level = if (zoom >= zoomToLevel.size) {
             0
         } else {
@@ -382,5 +363,52 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
             .map { it ->
                 ingressRepo.getTilesInfo(seq, it.value.map { it.value }, this)
             }
+    }
+
+    fun saveLinks(path: Uri) {
+        val data = _customLines.value
+        val file = LinkFile()
+        data?.forEach {
+            file.add(
+                LinkFileItem(
+                    String.format("#%06x", it.value.color.and(0xFFFFFF)),
+                    it.value.points.map {
+                        com.puuuuh.ingressmap.model.LatLng(it.latitude, it.longitude)
+                    }, "polyline"
+                )
+            )
+        }
+
+        val out = context.contentResolver.openOutputStream(path)
+        out?.write(MainApplication.gson.toJson(file).encodeToByteArray())
+        out?.close()
+    }
+
+    fun loadLinks(path: Uri) {
+        val input = context.contentResolver.openInputStream(path)
+
+        if (input != null) {
+            val data = MainApplication.gson.fromJson(
+                input.readBytes().decodeToString(),
+                LinkFile::class.java
+            )
+            data.forEach {
+                var prev: LatLng? = null
+                it.latLngs.forEach {
+                    val p = LatLng(it.lat, it.lng)
+
+                    if (prev != null) {
+                        val link = addCustomLink(UUID.randomUUID().toString(), Pair(prev!!, p))
+                        if (link != null) {
+                            customPointRepo.add(link)
+                        }
+                    }
+
+                    prev = p
+                }
+            }
+
+        }
+        input?.close()
     }
 }

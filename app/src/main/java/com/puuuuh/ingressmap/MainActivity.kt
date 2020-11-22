@@ -19,12 +19,12 @@ import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
-import com.google.android.gms.maps.model.LatLng
 import com.google.android.material.navigation.NavigationView
 import com.puuuuh.ingressmap.model.GameEntity
 import com.puuuuh.ingressmap.model.PortalData
 import com.puuuuh.ingressmap.repository.PlacesRepository
 import com.puuuuh.ingressmap.repository.PortalsRepo
+import com.puuuuh.ingressmap.settings.FullPosition
 import com.puuuuh.ingressmap.settings.Settings
 import com.puuuuh.ingressmap.utils.throttleLatest
 import com.puuuuh.ingressmap.view.LoginActivity
@@ -50,6 +50,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (savedInstanceState != null) {
+            return
+        }
+
         setContentView(R.layout.activity_main)
 
         if (intent.action == Intent.ACTION_VIEW && intent.dataString != null) {
@@ -60,15 +64,13 @@ class MainActivity : AppCompatActivity() {
                 val parts = location.split(",")
                 if (parts.count() == 2) {
                     try {
-                        Settings.lastPosition = LatLng(parts[0].toDouble(), parts[1].toDouble())
+                        Settings.lastPosition = FullPosition(
+                            parts[0].toDouble(),
+                            parts[1].toDouble(),
+                            (zoom?.toFloat() ?: 17.0f)
+                        )
                     } catch (e: NumberFormatException) {
                     }
-                }
-            }
-            if (zoom != null) {
-                try {
-                    Settings.lastZoom = zoom.toFloat()
-                } catch (e: NumberFormatException) {
                 }
             }
         }
@@ -216,7 +218,13 @@ class MainActivity : AppCompatActivity() {
             override fun onSuggestionClick(position: Int): Boolean {
                 val test = adapter.getItem(position)
                 if (test is MatrixCursor) {
-                    mapViewModel.moveCamera(LatLng(test.getDouble(3), test.getDouble(2)))
+                    mapViewModel.moveCamera(
+                        FullPosition(
+                            test.getDouble(3),
+                            test.getDouble(2),
+                            16.0f
+                        )
+                    )
                     if (test.columnCount == 5)
                         mapViewModel.selectPortal(
                             GameEntity.Portal(

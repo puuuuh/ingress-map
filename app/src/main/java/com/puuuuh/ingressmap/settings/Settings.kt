@@ -5,7 +5,8 @@ import android.content.SharedPreferences
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.preference.PreferenceManager
-import com.google.android.gms.maps.model.LatLng
+
+data class FullPosition(val lat: Double, val lng: Double, val zoom: Float)
 
 object Settings {
     private const val SHOW_FIELDS = "SHOW_FIELDS"
@@ -79,25 +80,18 @@ object Settings {
             mSharedPref?.edit()?.putBoolean(DRAW_MODE, value)?.apply()
         }
 
-    var lastPosition: LatLng
+    var lastPosition: FullPosition
         get() {
             val lat = mSharedPref?.getFloat(LAST_LAT, 0f)!!.toDouble()
             val lng = mSharedPref?.getFloat(LAST_LNG, 0f)!!.toDouble()
-            return LatLng(lat, lng)
+            val zoom = mSharedPref?.getFloat(LAST_ZOOM, 3f)!!
+            return FullPosition(lat, lng, zoom)
         }
         set(value) {
             mSharedPref?.edit()
-                ?.putFloat(LAST_LAT, value.latitude.toFloat())
-                ?.putFloat(LAST_LNG, value.longitude.toFloat())
-                ?.apply()
-        }
-    var lastZoom: Float
-        get() {
-            return mSharedPref?.getFloat(LAST_ZOOM, 3f)!!
-        }
-        set(value) {
-            mSharedPref?.edit()
-                ?.putFloat(LAST_ZOOM, value)
+                ?.putFloat(LAST_LAT, value.lat.toFloat())
+                ?.putFloat(LAST_LNG, value.lng.toFloat())
+                ?.putFloat(LAST_ZOOM, value.zoom)
                 ?.apply()
         }
     var apiVersion: String

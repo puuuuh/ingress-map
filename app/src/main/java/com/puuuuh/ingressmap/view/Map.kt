@@ -1,9 +1,9 @@
 package com.puuuuh.ingressmap.view
 
 import android.Manifest
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.graphics.PorterDuff
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -12,6 +12,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import com.getbase.floatingactionbutton.FloatingActionButton
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
@@ -20,6 +21,7 @@ import com.google.android.gms.maps.model.*
 import com.google.common.geometry.S2CellId
 import com.puuuuh.ingressmap.R
 import com.puuuuh.ingressmap.model.GameEntity
+import com.puuuuh.ingressmap.settings.FullPosition
 import com.puuuuh.ingressmap.settings.Settings
 import com.puuuuh.ingressmap.utils.toLatLng
 import com.puuuuh.ingressmap.viewmodel.MapViewModel
@@ -37,13 +39,24 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
     private var customLinks = mutableMapOf<String, Polyline>()
     private var customFields = mutableMapOf<String, Polygon>()
     private var selectedPoint: Marker? = null
+    private var saveLinksIntent =
+        registerForActivityResult(ActivityResultContracts.CreateDocument()) {
+            mapViewModel.saveLinks(it)
+        }
+    private var loadLinksIntent = registerForActivityResult(ActivityResultContracts.GetContent()) {
+        mapViewModel.loadLinks(it)
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        super.onCreateView(inflater, container, savedInstanceState)
+        mapViewModel.moveCamera(Settings.lastPosition)
+
+        if (savedInstanceState != null)
+            return null
+
         val view = inflater.inflate(R.layout.fragment_map, container, false)
 
         if (Settings.myLocation) {
@@ -54,10 +67,39 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
             }.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))
         }
 
+
         val map = childFragmentManager.findFragmentById(R.id.map)
         (map as SupportMapFragment).getMapAsync(this)
 
         return view
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        view.findViewById<FloatingActionButton>(R.id.saveFab).setOnClickListener {
+            saveLinksIntent.launch("links.txt")
+        }
+        view.findViewById<FloatingActionButton>(R.id.openFab).setOnClickListener {
+            loadLinksIntent.launch("*/*")
+        }
+
+        view.findViewById<FloatingActionButton>(R.id.drawFab).backgroundTintMode =
+            if (Settings.drawMode) {
+                PorterDuff.Mode.XOR
+            } else {
+                null
+            }
+
+        view.findViewById<FloatingActionButton>(R.id.drawFab).setOnClickListener {
+            Settings.drawMode = !Settings.drawMode
+
+            view.findViewById<FloatingActionButton>(R.id.drawFab).backgroundTintMode =
+                if (Settings.drawMode) {
+                    PorterDuff.Mode.XOR
+                } else {
+                    null
+                }
+        }
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
@@ -66,20 +108,15 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
         mMap.setOnMarkerClickListener(this)
         mMap.setOnPolylineClickListener(this)
         mMap.setMinZoomPreference(3f)
-        var zoom = Settings.lastZoom
-        if (zoom < 3) {
-            zoom = 3f
-        }
-        if (zoom > 21f) {
-            Settings.lastZoom = 21f
-        }
         mMap.setOnCameraIdleListener(this)
         mMap.mapType = GoogleMap.MAP_TYPE_HYBRID
         enableMyLocation()
 
         mapViewModel.targetPosition.observe(viewLifecycleOwner, {
-            if (it.longitude != 0.0 && it.latitude != 0.0)
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(it, 17f))
+            if (it.lat != 0.0 && it.lng != 0.0) {
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(it.lat, it.lng), it.zoom))
+                mapViewModel.moveCamera(FullPosition(0.0, 0.0, 0.0f))
+            }
         })
 
         mapViewModel.portals.observe(viewLifecycleOwner, {
@@ -327,7 +364,7 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
             customFields = new
         })
 
-        floatingActionButton.setOnClickListener {
+        /*floatingActionButton.setOnClickListener {
             val sendIntent: Intent = Intent().apply {
                 action = Intent.ACTION_SEND
                 putExtra(
@@ -344,7 +381,7 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
 
             val shareIntent = Intent.createChooser(sendIntent, null)
             startActivity(shareIntent)
-        }
+        }*/
     }
 
     private fun enableMyLocation() {
@@ -384,6 +421,4 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
         mapViewModel.removeCustomLine(p0.tag as String)
         return
     }
-
-
 }
