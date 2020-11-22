@@ -25,6 +25,7 @@ class MainApplication : Application() {
             .registerTypeAdapter(Point::class.java, PointDeserializer())
             .registerTypeAdapter(PortalData::class.java, PortalDeserializer())
             .registerTypeAdapter(Resonator::class.java, ResonatorDeserializer())
+            .registerTypeAdapter(PlayerInfo::class.java, PlayerInfoDeserializer())
             .create()
 
         fun applicationContext(): Context {

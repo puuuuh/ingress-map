@@ -28,5 +28,4 @@ class ModDeserializer : JsonDeserializer<Mod> {
         }
         return Mod(owner, name, level, effects)
     }
-
 }

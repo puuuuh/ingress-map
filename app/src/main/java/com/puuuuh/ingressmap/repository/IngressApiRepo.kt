@@ -3,6 +3,7 @@ package com.puuuuh.ingressmap.repository
 import android.util.Log
 import com.puuuuh.ingressmap.MainApplication
 import com.puuuuh.ingressmap.model.GameEntity
+import com.puuuuh.ingressmap.model.PlayerInfo
 import com.puuuuh.ingressmap.model.PortalData
 import com.puuuuh.ingressmap.settings.Settings
 import com.puuuuh.ingressmap.utils.AuthInterceptor
@@ -26,6 +27,10 @@ interface OnDataReadyCallback {
 
 interface OnPortalExReadyCallback {
     fun onPortalExReady(portal: PortalData)
+}
+
+interface OnPlayerInfoReadyCallback {
+    fun onPlayerInfoReady(info: PlayerInfo)
 }
 
 data class GetEntitiesPayload(val tileKeys: List<String>) {
@@ -60,7 +65,7 @@ data class CacheEntry(
 
 class IngressApiRepo {
     var cache: ConcurrentMap<String, CacheEntry> = ConcurrentHashMap()
-
+    val g = MainApplication.gson
     var okHttpClient: OkHttpClient = OkHttpClient()
 
     init {
@@ -78,11 +83,47 @@ class IngressApiRepo {
         okHttpClient.newCall(r).enqueue(cb)
     }
 
+    private fun getPage(url: String, cb: Callback) {
+        val r = Request.Builder()
+            .url(URL("https://intel.ingress.com/intel/$url"))
+            .get()
+            .build()
+        okHttpClient.newCall(r).enqueue(cb)
+    }
+
+    fun getPlayerInfo(callback: OnPlayerInfoReadyCallback, retry: Int = 0) {
+        if (retry > 2) {
+            return
+        }
+        getPage("", object : Callback {
+            override fun onFailure(call: Call?, e: IOException?) {
+                getPlayerInfo(callback, retry + 1)
+            }
+
+            override fun onResponse(call: Call?, response: Response?) {
+                if (response!!.code() != 200)
+                    return
+                try {
+                    val html = response.body()?.string()
+                    val r = Regex("var PLAYER = (\\{.*?\\})")
+                    if (html != null) {
+                        val json = r.find(html)?.groups?.get(1)?.value
+                        if (json != null) {
+                            callback.onPlayerInfoReady(g.fromJson(json, PlayerInfo::class.java))
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("IngressApiRepo", e.message ?: "")
+                }
+            }
+        })
+    }
+
     fun getExtendedPortalData(guid: String, callback: OnPortalExReadyCallback, retry: Int = 0) {
         if (retry > 2) {
             return
         }
-        val g = MainApplication.gson
+
 
         val payload = g.toJson(GetPortalDataPayload(guid))
 

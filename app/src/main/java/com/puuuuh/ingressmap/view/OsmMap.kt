@@ -48,7 +48,10 @@ class OsmMap : Fragment(), MapListener, Marker.OnMarkerClickListener {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        super.onCreateView(inflater, container, savedInstanceState)
+        mapViewModel.moveCamera(Settings.lastPosition)
+        if (savedInstanceState != null)
+            return null
+
         return inflater.inflate(R.layout.fragment_osmmap, container, false)
     }
 

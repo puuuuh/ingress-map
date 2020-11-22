@@ -2,10 +2,14 @@ package com.puuuuh.ingressmap
 
 import android.app.SearchManager
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.database.MatrixCursor
+import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.view.Menu
+import android.widget.ProgressBar
+import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -50,9 +54,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (savedInstanceState != null) {
-            return
-        }
 
         setContentView(R.layout.activity_main)
 
@@ -109,7 +110,37 @@ class MainActivity : AppCompatActivity() {
         Settings.liveToken.observe(this, {
             if (it == "") {
                 startLogin()
+            } else {
+                mapViewModel.updatePlayerInfo()
             }
+        })
+
+        val header = navView.getHeaderView(0)
+        val healthProgressBar = header.findViewById<ProgressBar>(R.id.healthProgress)
+        val lvlProgressBar = header.findViewById<ProgressBar>(R.id.lvlProgress)
+        val playerNameTextView = header.findViewById<TextView>(R.id.playerName)
+        val playerLevelTextView = header.findViewById<TextView>(R.id.lvl)
+
+        healthProgressBar.progressTintList = ColorStateList.valueOf(Color.RED)
+
+        mapViewModel.playerInfo.observe(this, {
+            val color = if (it.team == "ENLIGHTENED") {
+                Color.GREEN
+            } else {
+                Color.BLUE
+            }
+            lvlProgressBar.progressTintList = ColorStateList.valueOf(color)
+
+            val targetAP = it.min_ap_for_next_level - it.min_ap_for_current_level
+            val currentAP = it.ap - it.min_ap_for_current_level
+
+            playerNameTextView.text = it.nickname
+            playerLevelTextView.text = it.verified_level.toString()
+
+            if (targetAP > 0)
+                lvlProgressBar.progress = currentAP * 100 / targetAP
+            if (it.xm_capacity > 0)
+                healthProgressBar.progress = it.energy * 100 / it.xm_capacity
         })
 
         mapViewModel.selectedPortal.observe(

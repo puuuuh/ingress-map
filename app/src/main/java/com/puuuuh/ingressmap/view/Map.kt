@@ -53,11 +53,14 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
         savedInstanceState: Bundle?
     ): View? {
         mapViewModel.moveCamera(Settings.lastPosition)
-
         if (savedInstanceState != null)
             return null
 
-        val view = inflater.inflate(R.layout.fragment_map, container, false)
+        return inflater.inflate(R.layout.fragment_map, container, false)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
         if (Settings.myLocation) {
             registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
@@ -67,15 +70,9 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
             }.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))
         }
 
-
         val map = childFragmentManager.findFragmentById(R.id.map)
         (map as SupportMapFragment).getMapAsync(this)
 
-        return view
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
         view.findViewById<FloatingActionButton>(R.id.saveFab).setOnClickListener {
             saveLinksIntent.launch("links.txt")
         }

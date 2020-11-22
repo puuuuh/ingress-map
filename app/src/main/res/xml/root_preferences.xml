@@ -45,4 +45,10 @@
         </ListPreference>
     </PreferenceCategory>
 
+    <PreferenceCategory app:title="Account">
+        <Preference
+            app:key="LOGOUT"
+            app:title="Log out" />
+    </PreferenceCategory>
+
 </PreferenceScreen>

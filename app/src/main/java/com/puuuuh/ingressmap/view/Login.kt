@@ -8,7 +8,6 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.puuuuh.ingressmap.R
 import com.puuuuh.ingressmap.settings.Settings
@@ -28,7 +27,7 @@ class LoginActivity : AppCompatActivity() {
         viewModel.setTokens("", "")
         viewModel.setVersion("")
 
-        viewModel.authInfo.observe(this, Observer {
+        viewModel.authInfo.observe(this, {
             if (it.csrf.isNotEmpty() && it.token.isNotEmpty() && it.version.isNotEmpty()) {
                 finish()
             }
@@ -81,8 +80,11 @@ class LoginActivity : AppCompatActivity() {
                 return
             }
         }
-        login_webview.settings.userAgentString = "Mozilla/5.0 (Linux; Android 7.0; SM-G930V Build/NRD90M) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.125 Mobile Safari/537.36"
+        login_webview.settings.userAgentString =
+            "Mozilla/5.0 (Linux; Android 7.0; SM-G930V Build/NRD90M) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.125 Mobile Safari/537.36"
         login_webview.settings.javaScriptEnabled = true
+        val cookieManager = CookieManager.getInstance()
+        cookieManager.setCookie("intel.ingress.com", "sessionid=")
 
 
         login_webview.loadUrl("https://accounts.google.com/o/oauth2/v2/auth?client_id=369030586920-h43qso8aj64ft2h5ruqsqlaia9g9huvn.apps.googleusercontent.com&redirect_uri=https://intel.ingress.com/intel&prompt=consent%20select_account&state=GOOGLE&scope=email%20profile&response_type=code")

@@ -94,6 +94,9 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
     private val _selectedPortal = MutableLiveData<GameEntity.Portal?>()
     val selectedPortal: LiveData<GameEntity.Portal?> = _selectedPortal
 
+    private val _playerInfo = MutableLiveData<PlayerInfo>()
+    val playerInfo: LiveData<PlayerInfo> = _playerInfo
+
     private val zoomToLevel = arrayOf(8, 8, 8, 8, 7, 7, 6, 6, 5, 4, 4, 3, 2, 1, 1, 1, 1, 1, 1, 1)
 
     private val zoomToArea = arrayOf(
@@ -125,6 +128,14 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
                 )
             }
         }
+    }
+
+    fun updatePlayerInfo() {
+        ingressRepo.getPlayerInfo(object : OnPlayerInfoReadyCallback {
+            override fun onPlayerInfoReady(info: PlayerInfo) {
+                _playerInfo.postValue(info)
+            }
+        })
     }
 
     fun updatePosition(pos: LatLng, r: LatLngBounds, z: Int) {

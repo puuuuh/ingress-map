@@ -35,6 +35,8 @@
     <string name="portal_energy_label">Energy:</string>
     <string name="portal_picture_desc">Portal picture</string>
     <string name="resonators_header_label">Resonators:</string>
+    <string name="nick_label">Nick:</string>
+    <string name="level_label">Level:</string>
 
     <string-array name="map_providers">
         <item>Google map</item>
