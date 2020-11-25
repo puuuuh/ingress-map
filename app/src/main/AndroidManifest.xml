@@ -7,6 +7,10 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <queries>
+        <package android:name="com.android.vending" />
+    </queries>
+
     <application
         android:name=".MainApplication"
         android:allowBackup="false"
@@ -17,6 +21,8 @@
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true"
         tools:targetApi="m">
+
+
         <activity
             android:name=".MainActivity"
             android:label="@string/title_activity_main">
