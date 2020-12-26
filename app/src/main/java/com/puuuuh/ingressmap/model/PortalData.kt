@@ -13,6 +13,7 @@ data class PortalData(
     var pic: String,
     var name: String,
     var team: String,
+    var specials: Set<String>,
     var mods: List<Mod>,
     var resonators: List<Resonator>,
     var owner: String,
@@ -24,13 +25,14 @@ data class PortalData(
         energy: Int,
         pic: String,
         name: String,
-        team: String, ) : this(lat, lng, lvl, energy, pic, name, team, emptyList(), emptyList(), "")
+        team: String,
+        specials: Set<String>) : this(lat, lng, lvl, energy, pic, name, team, specials, emptyList(), emptyList(), "")
 
     constructor(
         name: String,
         lat: Double,
         lng: Double
-    ) : this(lat, lng, 0, 0, "", name, "")
+    ) : this(lat, lng, 0, 0, "", name, "", setOf())
 }
 
 class PortalDeserializer : JsonDeserializer<PortalData> {
@@ -51,6 +53,7 @@ class PortalDeserializer : JsonDeserializer<PortalData> {
             entityData[7].asString
         }
         val name = entityData[8].asString
+        val specials = entityData[9].asJsonArray.map { it.asString }.toHashSet()
         if (entityData.size() > 14) {
             val rawModArr = entityData[14].asJsonArray
             val mods = rawModArr.map {
@@ -65,10 +68,10 @@ class PortalDeserializer : JsonDeserializer<PortalData> {
             val energy = resonators.sumOf { it.energy }
 
             val owner = entityData[16].asString
-            return PortalData(lat, lng, lvl, energy, pic, name, team, mods, resonators, owner)
+            return PortalData(lat, lng, lvl, energy, pic, name, team, specials, mods, resonators, owner)
         }
 
-        return PortalData(lat, lng, lvl, 0, pic, name, team)
+        return PortalData(lat, lng, lvl, 0, pic, name, team, specials)
     }
 
 }

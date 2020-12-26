@@ -12,6 +12,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.observe
 import com.getbase.floatingactionbutton.FloatingActionButton
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -122,13 +123,25 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
                 val old = portals.remove(i.key)
                 val iconRes = when (i.value.data.team) {
                     "E" -> {
-                        R.drawable.ic_green_portal
+                        if (i.value.data.specials.contains("sc5_p")) {
+                            R.drawable.ic_green_marked
+                        } else {
+                            R.drawable.ic_green_portal
+                        }
                     }
                     "R" -> {
-                        R.drawable.ic_blue_portal
+                        if (i.value.data.specials.contains("sc5_p")) {
+                            R.drawable.ic_blue_marked
+                        } else {
+                            R.drawable.ic_blue_portal
+                        }
                     }
                     else -> {
-                        R.drawable.ic_white_portal
+                        if (i.value.data.specials.contains("sc5_p")) {
+                            R.drawable.ic_white_marked
+                        } else {
+                            R.drawable.ic_white_portal
+                        }
                     }
                 }
                 val pos = LatLng(i.value.data.lat, i.value.data.lng)
