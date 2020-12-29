@@ -23,19 +23,25 @@ object Settings {
     private const val API_VERSION = "API_VERSION"
     private const val MAP_PROVIDER = "MAP_PROVIDER"
     private const val THEME = "THEME"
+    private const val HIDE_TEAMS = "HIDE_TEAMS"
 
     private var mSharedPref: SharedPreferences? = null
 
     private val _liveToken = MutableLiveData<String>()
     val liveToken: LiveData<String> = _liveToken
 
+    private val _liveHideTeams = MutableLiveData<Boolean>()
+    val liveHideTeams: LiveData<Boolean> = _liveHideTeams
+
     fun init(context: Context) {
         mSharedPref = PreferenceManager.getDefaultSharedPreferences(context)
         _liveToken.value = this.token
+        _liveHideTeams.value = this.hideTeams
 
         mSharedPref!!.registerOnSharedPreferenceChangeListener { _: SharedPreferences, s: String ->
             when (s) {
                 TOKEN -> _liveToken.value = this.token
+                HIDE_TEAMS -> _liveHideTeams.value = this.hideTeams
             }
         }
     }
@@ -148,7 +154,17 @@ object Settings {
         }
         set(value) {
             mSharedPref?.edit()
-                ?.putString(THEME, value.toString())
-                ?.apply()
+                    ?.putString(THEME, value.toString())
+                    ?.apply()
+        }
+
+    var hideTeams: Boolean
+        get() {
+            return mSharedPref?.getBoolean(HIDE_TEAMS, true)!!
+        }
+        set(value) {
+            mSharedPref?.edit()
+                    ?.putBoolean(HIDE_TEAMS, value)
+                    ?.apply()
         }
 }

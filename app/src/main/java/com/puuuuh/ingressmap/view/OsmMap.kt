@@ -2,6 +2,7 @@ package com.puuuuh.ingressmap.view
 
 import android.Manifest
 import android.graphics.Color
+import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -10,6 +11,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.res.ResourcesCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import com.google.android.gms.maps.model.BitmapDescriptor
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.puuuuh.ingressmap.BuildConfig
@@ -42,6 +45,8 @@ class OsmMap : Fragment(), MapListener, Marker.OnMarkerClickListener {
     private val mapViewModel: MapViewModel by activityViewModels { ViewmodelFactory(this.requireContext()) }
     private lateinit var mMyLocation: MyLocationNewOverlay
     private lateinit var mMap: MapView
+    private var hideTeams: Boolean = true
+    private lateinit var icons: HashMap<String, Drawable>
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -53,6 +58,20 @@ class OsmMap : Fragment(), MapListener, Marker.OnMarkerClickListener {
             return null
 
         return inflater.inflate(R.layout.fragment_osmmap, container, false)
+    }
+
+    private fun getIcon(portal: GameEntity.Portal): Drawable {
+        val team = if (!hideTeams) {
+            portal.data.team +
+                    if (portal.data.specials.contains("sc5_p")) {
+                        "-Marked"
+                    } else {
+                        ""
+                    }
+        } else {
+            "N"
+        }
+        return icons[team]!!
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -79,6 +98,19 @@ class OsmMap : Fragment(), MapListener, Marker.OnMarkerClickListener {
 
         var prev: FolderOverlay? = null
 
+        icons = hashMapOf(
+                Pair("E", ResourcesCompat.getDrawable(resources, R.drawable.ic_green_portal, null)!!),
+                Pair("R", ResourcesCompat.getDrawable(resources, R.drawable.ic_blue_portal, null)!!),
+                Pair("N", ResourcesCompat.getDrawable(resources, R.drawable.ic_white_portal, null)!!),
+                Pair("E-Marked", ResourcesCompat.getDrawable(resources, R.drawable.ic_green_marked, null)!!),
+                Pair("R-Marked", ResourcesCompat.getDrawable(resources, R.drawable.ic_blue_marked, null)!!),
+                Pair("N-Marked", ResourcesCompat.getDrawable(resources, R.drawable.ic_white_marked, null)!!),
+        )
+
+        Settings.liveHideTeams.observe(viewLifecycleOwner) {
+            hideTeams = it
+        }
+
         mapViewModel.targetPosition.observe(viewLifecycleOwner, {
             if (it.lat != 0.0 && it.lng != 0.0) {
                 mMap.controller.setCenter(GeoPoint(it.lat, it.lng))
@@ -89,21 +121,10 @@ class OsmMap : Fragment(), MapListener, Marker.OnMarkerClickListener {
         mapViewModel.portals.observe(viewLifecycleOwner, {
             val next = FolderOverlay()
             for (i in it) {
-                val iconRes = when (i.value.data.team) {
-                    "E" -> {
-                        R.drawable.ic_green_portal
-                    }
-                    "R" -> {
-                        R.drawable.ic_blue_portal
-                    }
-                    else -> {
-                        R.drawable.ic_white_portal
-                    }
-                }
                 val point = Marker(mMap)
                 point.relatedObject = i.value
                 point.setOnMarkerClickListener(this)
-                point.icon = ResourcesCompat.getDrawable(resources, iconRes, null)
+                point.icon = getIcon(i.value)
                 point.setAnchor(0.5f, 0.5f)
                 point.position = GeoPoint(i.value.data.lat, i.value.data.lng)
                 point.infoWindow = null

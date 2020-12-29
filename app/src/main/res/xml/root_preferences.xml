@@ -16,6 +16,9 @@
         <SwitchPreferenceCompat
             app:key="SHOW_CELLS"
             app:title="@string/show_cells" />
+        <SwitchPreferenceCompat
+            app:key="HIDE_TEAMS"
+            app:title="Same icons for different teams" />
     </PreferenceCategory>
 
     <PreferenceCategory app:title="@string/permissions_header">

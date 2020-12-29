@@ -21,6 +21,7 @@ import com.puuuuh.ingressmap.utils.throttleLatest
 import com.puuuuh.ingressmap.utils.toLatLng
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import java.nio.charset.Charset
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
@@ -391,7 +392,7 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
         }
 
         val out = context.contentResolver.openOutputStream(path)
-        out?.write(MainApplication.gson.toJson(file).encodeToByteArray())
+        out?.write(MainApplication.gson.toJson(file).toByteArray())
         out?.close()
     }
 
@@ -400,7 +401,7 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
 
         if (input != null) {
             val data = MainApplication.gson.fromJson(
-                input.readBytes().decodeToString(),
+                input.readBytes().toString(Charset.defaultCharset()),
                 LinkFile::class.java
             )
             data.forEach {

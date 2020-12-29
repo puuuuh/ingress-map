@@ -12,7 +12,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.observe
 import com.getbase.floatingactionbutton.FloatingActionButton
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -40,12 +39,16 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
     private var customLinks = mutableMapOf<String, Polyline>()
     private var customFields = mutableMapOf<String, Polygon>()
     private var selectedPoint: Marker? = null
+    private var hideTeams: Boolean = true
     private var saveLinksIntent =
         registerForActivityResult(ActivityResultContracts.CreateDocument()) {
-            mapViewModel.saveLinks(it)
+            if (it != null)
+                mapViewModel.saveLinks(it)
         }
+    private lateinit var icons: HashMap<String, BitmapDescriptor>
     private var loadLinksIntent = registerForActivityResult(ActivityResultContracts.GetContent()) {
-        mapViewModel.loadLinks(it)
+        if (it != null)
+            mapViewModel.loadLinks(it)
     }
 
     override fun onCreateView(
@@ -100,6 +103,20 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
         }
     }
 
+    private fun getIcon(portal: GameEntity.Portal): BitmapDescriptor {
+        val team = if (!hideTeams) {
+            portal.data.team +
+                    if (portal.data.specials.contains("sc5_p")) {
+                        "-Marked"
+                    } else {
+                        ""
+                    }
+        } else {
+            "N"
+        }
+        return icons[team]!!
+    }
+
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
         mMap.setMaxZoomPreference(21f)
@@ -109,6 +126,15 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
         mMap.setOnCameraIdleListener(this)
         mMap.mapType = GoogleMap.MAP_TYPE_HYBRID
         enableMyLocation()
+
+        icons = hashMapOf(
+                Pair("E", BitmapDescriptorFactory.fromResource(R.drawable.ic_green_portal)),
+                Pair("R", BitmapDescriptorFactory.fromResource(R.drawable.ic_blue_portal)),
+                Pair("N", BitmapDescriptorFactory.fromResource(R.drawable.ic_white_portal)),
+                Pair("E-Marked", BitmapDescriptorFactory.fromResource(R.drawable.ic_green_marked)),
+                Pair("R-Marked", BitmapDescriptorFactory.fromResource(R.drawable.ic_blue_marked)),
+                Pair("N-Marked", BitmapDescriptorFactory.fromResource(R.drawable.ic_white_marked)),
+        )
 
         mapViewModel.targetPosition.observe(viewLifecycleOwner, {
             if (it.lat != 0.0 && it.lng != 0.0) {
@@ -121,35 +147,15 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
             val newPortals = mutableMapOf<String, Pair<Marker, Circle?>>()
             for (i in it) {
                 val old = portals.remove(i.key)
-                val iconRes = when (i.value.data.team) {
-                    "E" -> {
-                        if (i.value.data.specials.contains("sc5_p")) {
-                            R.drawable.ic_green_marked
-                        } else {
-                            R.drawable.ic_green_portal
-                        }
-                    }
-                    "R" -> {
-                        if (i.value.data.specials.contains("sc5_p")) {
-                            R.drawable.ic_blue_marked
-                        } else {
-                            R.drawable.ic_blue_portal
-                        }
-                    }
-                    else -> {
-                        if (i.value.data.specials.contains("sc5_p")) {
-                            R.drawable.ic_white_marked
-                        } else {
-                            R.drawable.ic_white_portal
-                        }
-                    }
-                }
+
+                val iconRes = getIcon(i.value)
+
                 val pos = LatLng(i.value.data.lat, i.value.data.lng)
                 if (old == null) {
                     val m = MarkerOptions()
                         .position(pos)
                         .title(i.value.data.name)
-                        .icon(BitmapDescriptorFactory.fromResource(iconRes))
+                        .icon(iconRes)
                         .zIndex(2f)
                         .anchor(0.5f, 0.5f)
                     newPortals[i.key] = Pair(
@@ -172,7 +178,7 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
                         old.first.position = pos
                     }
                     if ((old.first.tag as GameEntity.Portal).data.team != i.value.data.team) {
-                        old.first.setIcon(BitmapDescriptorFactory.fromResource(iconRes))
+                        old.first.setIcon(iconRes)
                     }
                     if (mMap.cameraPosition.zoom > 18 && old.second == null) {
                         val oreol = CircleOptions()
@@ -372,6 +378,13 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
                 it.value.remove()
             }
             customFields = new
+        })
+
+        Settings.liveHideTeams.observe(viewLifecycleOwner, { data ->
+            hideTeams = data
+            portals.forEach { portal ->
+                portal.value.first.setIcon(getIcon(portal.value.first.tag as GameEntity.Portal))
+            }
         })
 
         /*floatingActionButton.setOnClickListener {

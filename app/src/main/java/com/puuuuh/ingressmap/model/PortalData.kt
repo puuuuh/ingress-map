@@ -65,7 +65,7 @@ class PortalDeserializer : JsonDeserializer<PortalData> {
                 context.deserialize<Resonator>(it, Resonator::class.java)
             }
 
-            val energy = resonators.sumOf { it.energy }
+            val energy = resonators.sumBy { it.energy }
 
             val owner = entityData[16].asString
             return PortalData(lat, lng, lvl, energy, pic, name, team, specials, mods, resonators, owner)
