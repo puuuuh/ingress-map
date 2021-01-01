@@ -29,16 +29,21 @@
 
     <PreferenceCategory app:title="Map">
         <ListPreference
+            app:useSimpleSummaryProvider="true"
             app:entries="@array/map_providers"
             app:entryValues="@array/map_providers_values"
             app:key="MAP_PROVIDER"
-            app:title="Map provider">
+            app:title="Map provider" />
 
-        </ListPreference>
+        <Preference
+            app:key="ICONS"
+            app:title="Portal colors">
+        </Preference>
     </PreferenceCategory>
 
     <PreferenceCategory app:title="Theme">
         <ListPreference
+            app:useSimpleSummaryProvider="true"
             app:defaultValue="-1"
             app:entries="@array/themes"
             app:entryValues="@array/themes_values"
@@ -53,5 +58,4 @@
             app:key="LOGOUT"
             app:title="Log out" />
     </PreferenceCategory>
-
 </PreferenceScreen>

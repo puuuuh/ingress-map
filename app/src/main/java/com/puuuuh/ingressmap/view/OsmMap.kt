@@ -9,6 +9,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.res.ResourcesCompat
+import androidx.core.graphics.drawable.toDrawable
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import com.google.android.gms.maps.model.BitmapDescriptor
@@ -19,7 +20,9 @@ import com.puuuuh.ingressmap.BuildConfig
 import com.puuuuh.ingressmap.R
 import com.puuuuh.ingressmap.model.GameEntity
 import com.puuuuh.ingressmap.model.PortalData
+import com.puuuuh.ingressmap.settings.ColorType
 import com.puuuuh.ingressmap.settings.Settings
+import com.puuuuh.ingressmap.utils.PortalIcons
 import com.puuuuh.ingressmap.utils.toGeoPoint
 import com.puuuuh.ingressmap.viewmodel.MapViewModel
 import com.puuuuh.ingressmap.viewmodel.ViewmodelFactory
@@ -99,12 +102,18 @@ class OsmMap : Fragment(), MapListener, Marker.OnMarkerClickListener {
         var prev: FolderOverlay? = null
 
         icons = hashMapOf(
-                Pair("E", ResourcesCompat.getDrawable(resources, R.drawable.ic_green_portal, null)!!),
-                Pair("R", ResourcesCompat.getDrawable(resources, R.drawable.ic_blue_portal, null)!!),
-                Pair("N", ResourcesCompat.getDrawable(resources, R.drawable.ic_white_portal, null)!!),
-                Pair("E-Marked", ResourcesCompat.getDrawable(resources, R.drawable.ic_green_marked, null)!!),
-                Pair("R-Marked", ResourcesCompat.getDrawable(resources, R.drawable.ic_blue_marked, null)!!),
-                Pair("N-Marked", ResourcesCompat.getDrawable(resources, R.drawable.ic_white_marked, null)!!),
+            Pair("E", PortalIcons.createIcon(Settings.getColor(ColorType.Main, "E"), Settings.getColor(
+                ColorType.Center, "E"), Color.TRANSPARENT).toDrawable(resources)),
+            Pair("R", PortalIcons.createIcon(Settings.getColor(ColorType.Main, "R"), Settings.getColor(
+                ColorType.Center, "R"), Color.TRANSPARENT).toDrawable(resources)),
+            Pair("N", PortalIcons.createIcon(Settings.getColor(ColorType.Main, "N"), Settings.getColor(
+                ColorType.Center, "N"), Color.TRANSPARENT).toDrawable(resources)),
+            Pair("E-Marked", PortalIcons.createIcon(Settings.getColor(ColorType.Main, "E"), Settings.getColor(
+                ColorType.Center, "E"), Settings.getColor(ColorType.Volatile, "E")).toDrawable(resources)),
+            Pair("R-Marked", PortalIcons.createIcon(Settings.getColor(ColorType.Main, "R"), Settings.getColor(
+                ColorType.Center, "R"), Settings.getColor(ColorType.Volatile, "R")).toDrawable(resources)),
+            Pair("N-Marked", PortalIcons.createIcon(Settings.getColor(ColorType.Main, "N"), Settings.getColor(
+                ColorType.Center, "N"), Settings.getColor(ColorType.Volatile, "N")).toDrawable(resources)),
         )
 
         Settings.liveHideTeams.observe(viewLifecycleOwner) {
@@ -172,18 +181,6 @@ class OsmMap : Fragment(), MapListener, Marker.OnMarkerClickListener {
         mapViewModel.fields.observe(viewLifecycleOwner, {
             val next = FolderOverlay()
             for (i in it) {
-
-                val iconRes = when (i.value.data.team) {
-                    "E" -> {
-                        R.drawable.ic_green_portal
-                    }
-                    "R" -> {
-                        R.drawable.ic_blue_portal
-                    }
-                    else -> {
-                        R.drawable.ic_white_portal
-                    }
-                }
                 val polygon = Polygon(mMap)
                 polygon.infoWindow = null
                 val color = if (i.value.data.team == "E") {

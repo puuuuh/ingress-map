@@ -21,8 +21,10 @@ import com.google.android.gms.maps.model.*
 import com.google.common.geometry.S2CellId
 import com.puuuuh.ingressmap.R
 import com.puuuuh.ingressmap.model.GameEntity
+import com.puuuuh.ingressmap.settings.ColorType
 import com.puuuuh.ingressmap.settings.FullPosition
 import com.puuuuh.ingressmap.settings.Settings
+import com.puuuuh.ingressmap.utils.PortalIcons
 import com.puuuuh.ingressmap.utils.toLatLng
 import com.puuuuh.ingressmap.viewmodel.MapViewModel
 import com.puuuuh.ingressmap.viewmodel.ViewmodelFactory
@@ -128,12 +130,12 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
         enableMyLocation()
 
         icons = hashMapOf(
-                Pair("E", BitmapDescriptorFactory.fromResource(R.drawable.ic_green_portal)),
-                Pair("R", BitmapDescriptorFactory.fromResource(R.drawable.ic_blue_portal)),
-                Pair("N", BitmapDescriptorFactory.fromResource(R.drawable.ic_white_portal)),
-                Pair("E-Marked", BitmapDescriptorFactory.fromResource(R.drawable.ic_green_marked)),
-                Pair("R-Marked", BitmapDescriptorFactory.fromResource(R.drawable.ic_blue_marked)),
-                Pair("N-Marked", BitmapDescriptorFactory.fromResource(R.drawable.ic_white_marked)),
+                Pair("E", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "E"), Settings.getColor(ColorType.Center, "E"), Color.TRANSPARENT))),
+                Pair("R", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "R"), Settings.getColor(ColorType.Center, "R"), Color.TRANSPARENT))),
+                Pair("N", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "N"), Settings.getColor(ColorType.Center, "N"), Color.TRANSPARENT))),
+                Pair("E-Marked", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "E"), Settings.getColor(ColorType.Center, "E"), Settings.getColor(ColorType.Volatile, "E")))),
+                Pair("R-Marked", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "R"), Settings.getColor(ColorType.Center, "R"), Settings.getColor(ColorType.Volatile, "R")))),
+                Pair("N-Marked", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "N"), Settings.getColor(ColorType.Center, "N"), Settings.getColor(ColorType.Volatile, "N")))),
         )
 
         mapViewModel.targetPosition.observe(viewLifecycleOwner, {

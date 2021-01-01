@@ -5,10 +5,29 @@ import android.content.SharedPreferences
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.preference.PreferenceManager
+import java.util.*
 
 data class FullPosition(val lat: Double, val lng: Double, val zoom: Float)
 
+enum class ColorType {
+    Main,
+    Center,
+    Volatile
+}
+
 object Settings {
+    private val DEFAULT_COLORS = mapOf(
+        Pair("E_MAIN", 0xFF00FF00.toInt()),
+        Pair("E_CENTER", 0xFFFFFFFF.toInt()),
+        Pair("E_VOLATILE", 0xFFFFFF00.toInt()),
+        Pair("R_MAIN", 0xFF0000FF.toInt()),
+        Pair("R_CENTER", 0xFFFFFFFF.toInt()),
+        Pair("R_VOLATILE", 0xFFFFFF00.toInt()),
+        Pair("N_MAIN", 0xFFFFFFFF.toInt()),
+        Pair("N_CENTER", 0x00FFFFFF.toInt()),
+        Pair("N_VOLATILE", 0xFFFFFF00.toInt()),
+    )
+
     private const val SHOW_FIELDS = "SHOW_FIELDS"
     private const val SHOW_LINKS = "SHOW_LINKS"
     private const val SHOW_CELLS = "SHOW_CELLS"
@@ -160,11 +179,16 @@ object Settings {
 
     var hideTeams: Boolean
         get() {
-            return mSharedPref?.getBoolean(HIDE_TEAMS, true)!!
+            return mSharedPref?.getBoolean(HIDE_TEAMS, false)!!
         }
         set(value) {
             mSharedPref?.edit()
                     ?.putBoolean(HIDE_TEAMS, value)
                     ?.apply()
         }
+
+    fun getColor(t: ColorType, team: String): Int {
+        val key = "${team}_${t.toString().toUpperCase(Locale.ROOT)}"
+        return mSharedPref?.getInt(key, DEFAULT_COLORS[key]!!)!!
+    }
 }
