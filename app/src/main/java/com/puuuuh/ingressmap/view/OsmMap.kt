@@ -4,12 +4,14 @@ import android.Manifest
 import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.os.Bundle
+import android.transition.Visibility
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.drawable.toDrawable
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import com.google.android.gms.maps.model.BitmapDescriptor
@@ -83,6 +85,16 @@ class OsmMap : Fragment(), MapListener, Marker.OnMarkerClickListener {
             registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
                 if (it[Manifest.permission.ACCESS_FINE_LOCATION] != true) {
                     Settings.myLocation = false
+                } else {
+                    myLocationBtn.isVisible = true
+
+                    mMyLocation = MyLocationNewOverlay(GpsMyLocationProvider(context), mMap)
+                    mMyLocation.enableMyLocation()
+                    myLocationBtn.setOnClickListener {
+                        mMyLocation.enableFollowLocation()
+                    }
+
+                    mMap.overlays.add(mMyLocation)
                 }
             }.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))
         }
@@ -93,9 +105,7 @@ class OsmMap : Fragment(), MapListener, Marker.OnMarkerClickListener {
         mMap.minZoomLevel = 3.toDouble()
         map.zoomController.setVisibility(CustomZoomButtonsController.Visibility.ALWAYS)
         map.setMultiTouchControls(true)
-        mMyLocation = MyLocationNewOverlay(GpsMyLocationProvider(context), mMap)
-        mMap.overlays.add(mMyLocation)
-        mMyLocation.enableMyLocation()
+
         mMap.setTileSource(TileSourceFactory.MAPNIK)
         mMap.addMapListener(DelayedMapListener(this, 500))
 
@@ -286,7 +296,7 @@ class OsmMap : Fragment(), MapListener, Marker.OnMarkerClickListener {
     }
 
     override fun onMarkerClick(marker: Marker?, mapView: MapView?): Boolean {
-        if (marker?.relatedObject is PortalData) {
+        if (marker?.relatedObject is GameEntity.Portal) {
             mapViewModel.selectPortal(marker.relatedObject as GameEntity.Portal)
             return true
         }
