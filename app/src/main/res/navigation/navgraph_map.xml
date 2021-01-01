@@ -21,4 +21,9 @@
         android:id="@+id/nav_settings"
         android:name="com.puuuuh.ingressmap.view.SettingsFragment"
         android:label="@string/menu_map" />
+
+    <fragment
+        android:id="@+id/icons_settings"
+        android:name="com.puuuuh.ingressmap.view.IconsSettingsFragment"
+        android:label="@string/menu_map" />
 </navigation>

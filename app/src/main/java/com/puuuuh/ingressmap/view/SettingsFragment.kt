@@ -1,6 +1,7 @@
 package com.puuuuh.ingressmap.view
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.navigation.fragment.findNavController
 import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
@@ -33,7 +34,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
         }
 
         iconsPref.onPreferenceClickListener = Preference.OnPreferenceClickListener { _ ->
-            setPreferencesFromResource(R.xml.icons_preferences, rootKey)
+            findNavController().navigate(R.id.icons_settings)
             true
         }
     }
