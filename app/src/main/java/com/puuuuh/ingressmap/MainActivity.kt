@@ -14,6 +14,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
+import androidx.appcompat.widget.SearchView.SearchAutoComplete
 import androidx.appcompat.widget.Toolbar
 import androidx.cursoradapter.widget.CursorAdapter
 import androidx.cursoradapter.widget.SimpleCursorAdapter
@@ -42,7 +43,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var appBarConfiguration: AppBarConfiguration
     private val mapViewModel: MapViewModel by viewModels { ViewmodelFactory(applicationContext) }
     private val loginContract = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
+            ActivityResultContracts.StartActivityForResult()
     ) {
         if (Settings.token == "") {
             startLogin()
@@ -63,9 +64,9 @@ class MainActivity : AppCompatActivity() {
                 if (parts.count() == 2) {
                     try {
                         Settings.lastPosition = FullPosition(
-                            parts[0].toDouble(),
-                            parts[1].toDouble(),
-                            (zoom?.toFloat() ?: 17.0f)
+                                parts[0].toDouble(),
+                                parts[1].toDouble(),
+                                (zoom?.toFloat() ?: 17.0f)
                         )
                     } catch (e: NumberFormatException) {
                     }
@@ -94,10 +95,10 @@ class MainActivity : AppCompatActivity() {
         navController.graph = graph
 
         appBarConfiguration = AppBarConfiguration(
-            setOf(
-                R.id.nav_osmmap,
-                R.id.nav_map
-            ), drawerLayout
+                setOf(
+                        R.id.nav_osmmap,
+                        R.id.nav_map
+                ), drawerLayout
         )
 
         setupActionBarWithNavController(navController, appBarConfiguration)
@@ -141,15 +142,15 @@ class MainActivity : AppCompatActivity() {
         })
 
         mapViewModel.selectedPortal.observe(
-            this,
-            { data ->
-                if (data != null) {
-                    val fm = supportFragmentManager
-                    val dlg = PortalInfo.newInstance(data)
-                    dlg.show(fm, "fragment_alert")
-                    mapViewModel.selectPortal(null)
-                }
-            })
+                this,
+                { data ->
+                    if (data != null) {
+                        val fm = supportFragmentManager
+                        val dlg = PortalInfo.newInstance(data)
+                        dlg.show(fm, "fragment_alert")
+                        mapViewModel.selectPortal(null)
+                    }
+                })
     }
 
 
@@ -164,8 +165,8 @@ class MainActivity : AppCompatActivity() {
         val viewIds = intArrayOf(android.R.id.text1)
 
         val adapter: CursorAdapter = SimpleCursorAdapter(
-            this,
-            android.R.layout.simple_list_item_1, null, columNames, viewIds
+                this,
+                android.R.layout.simple_list_item_1, null, columNames, viewIds
         )
         searchView.suggestionsAdapter = adapter
 
@@ -179,8 +180,8 @@ class MainActivity : AppCompatActivity() {
             val matrixCursor = MatrixCursor(columns)
             for ((i, data) in it.withIndex()) {
                 val test = data.properties.name
-                        ?: "${data.properties.street} ${data.properties.housenumber}"
-                val name = "$test ${data.properties.state} ${data.properties.country}"
+                        ?: "${data.properties.state} ${data.properties.street} ${data.properties.housenumber}"
+                val name = "$test ${data.properties.country}"
                 matrixCursor.addRow(
                         arrayOf(
                                 i,
@@ -224,12 +225,15 @@ class MainActivity : AppCompatActivity() {
             placesRepo.get(it)
         }
 
+        val autocomplete = searchView.findViewById(androidx.appcompat.R.id.search_src_text) as SearchAutoComplete
+
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
                 return false
             }
 
             override fun onQueryTextChange(newText: String?): Boolean {
+                autocomplete.dropDownWidth = resources.displayMetrics.widthPixels - 10;
                 if (newText != null) {
                     if (search_toggle.isChecked)
                         placesThrottle(newText)
@@ -249,11 +253,11 @@ class MainActivity : AppCompatActivity() {
                 val test = adapter.getItem(position)
                 if (test is MatrixCursor) {
                     mapViewModel.moveCamera(
-                        FullPosition(
-                            test.getDouble(3),
-                            test.getDouble(2),
-                            16.0f
-                        )
+                            FullPosition(
+                                    test.getDouble(3),
+                                    test.getDouble(2),
+                                    16.0f
+                            )
                     )
                 }
 

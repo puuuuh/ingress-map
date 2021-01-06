@@ -34,7 +34,7 @@ data class Properties(
     val osm_type: String,
     val osm_value: String,
     val postcode: String,
-    val state: String,
+    val state: String?,
     val street: String
 )
 

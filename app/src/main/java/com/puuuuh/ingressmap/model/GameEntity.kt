@@ -25,19 +25,19 @@ class GameEntityDeserializer : JsonDeserializer<GameEntity> {
             "p" -> {
                 (GameEntity::Portal)(
                     id,
-                    context.deserialize<PortalData>(entityData, PortalData::class.java)
+                    context.deserialize(entityData, PortalData::class.java)
                 )
             }
             "e" -> {
                 (GameEntity::Link)(
                     id,
-                    context.deserialize<LinkData>(entityData, LinkData::class.java)
+                    context.deserialize(entityData, LinkData::class.java)
                 )
             }
             "r" -> {
                 (GameEntity::Field)(
                     id,
-                    context.deserialize<FieldData>(entityData, FieldData::class.java)
+                    context.deserialize(entityData, FieldData::class.java)
                 )
             }
             else -> throw JsonParseException("Invalid game entity")
