@@ -24,10 +24,8 @@ import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import com.google.android.material.navigation.NavigationView
-import com.puuuuh.ingressmap.model.GameEntity
-import com.puuuuh.ingressmap.model.PortalData
 import com.puuuuh.ingressmap.repository.PlacesRepository
-import com.puuuuh.ingressmap.repository.PortalsRepo
+import com.puuuuh.ingressmap.repository.PortalsRepository
 import com.puuuuh.ingressmap.settings.FullPosition
 import com.puuuuh.ingressmap.settings.Settings
 import com.puuuuh.ingressmap.utils.throttleLatest
@@ -37,7 +35,6 @@ import com.puuuuh.ingressmap.viewmodel.MapViewModel
 import com.puuuuh.ingressmap.viewmodel.ViewmodelFactory
 import kotlinx.android.synthetic.main.search_switch.*
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 
 
 class MainActivity : AppCompatActivity() {
@@ -172,25 +169,46 @@ class MainActivity : AppCompatActivity() {
         )
         searchView.suggestionsAdapter = adapter
 
-        val portalsRepo = PortalsRepo()
+        val portalsRepo = PortalsRepository()
         val placesRepo = PlacesRepository()
 
         placesRepo.data.observe(this, {
             val columns =
-                arrayOf("_id", "suggest_text_1", "lat", "lng")
+                    arrayOf("_id", "suggest_text_1", "lat", "lng")
 
             val matrixCursor = MatrixCursor(columns)
             for ((i, data) in it.withIndex()) {
                 val test = data.properties.name
-                    ?: "${data.properties.street} ${data.properties.housenumber}"
+                        ?: "${data.properties.street} ${data.properties.housenumber}"
                 val name = "$test ${data.properties.state} ${data.properties.country}"
                 matrixCursor.addRow(
-                    arrayOf(
-                        i,
-                        name,
-                        data.geometry.coordinates[0],
-                        data.geometry.coordinates[1]
-                    )
+                        arrayOf(
+                                i,
+                                name,
+                                data.geometry.coordinates[0],
+                                data.geometry.coordinates[1]
+                        )
+                )
+            }
+            runOnUiThread {
+                adapter.swapCursor(matrixCursor)
+            }
+        })
+
+        portalsRepo.data.observe(this, {
+            val columns =
+                    arrayOf("_id", "suggest_text_1", "lat", "lng")
+
+            val matrixCursor = MatrixCursor(columns)
+            for ((i, data) in it.withIndex()) {
+                val name = data.name + " (" + data.address + ")"
+                matrixCursor.addRow(
+                        arrayOf(
+                                i,
+                                name,
+                                data.lng.toDouble() / 1000000,
+                                data.lat.toDouble() / 1000000,
+                        )
                 )
             }
             runOnUiThread {
@@ -199,26 +217,7 @@ class MainActivity : AppCompatActivity() {
         })
 
         val portalsThrottle = throttleLatest<String>(1000, GlobalScope) {
-            GlobalScope.launch {
-                val columns =
-                    arrayOf("_id", "suggest_text_1", "lat", "lng", "id")
-
-                val matrixCursor = MatrixCursor(columns)
-                for ((i, data) in portalsRepo.find(it).withIndex()) {
-                    matrixCursor.addRow(
-                        arrayOf(
-                            i,
-                            data.title,
-                            data.lng,
-                            data.lat,
-                            data.id,
-                        )
-                    )
-                }
-                runOnUiThread {
-                    adapter.swapCursor(matrixCursor)
-                }
-            }
+            portalsRepo.get(it)
         }
 
         val placesThrottle = throttleLatest<String>(1000, GlobalScope) {
@@ -256,17 +255,6 @@ class MainActivity : AppCompatActivity() {
                             16.0f
                         )
                     )
-                    if (test.columnCount == 5)
-                        mapViewModel.selectPortal(
-                            GameEntity.Portal(
-                                test.getString(4),
-                                PortalData(
-                                    test.getString(1),
-                                    test.getDouble(3),
-                                    test.getDouble(2)
-                                )
-                            )
-                        )
                 }
 
                 return true

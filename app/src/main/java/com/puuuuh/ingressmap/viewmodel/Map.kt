@@ -44,7 +44,6 @@ private fun getXYTile(lat : Double, lng: Double, zoom : Int) : Pair<Int, Int> {
 class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnCellsReadyCallback {
     private val ingressRepo = IngressApiRepo()
     private val customPointRepo = CustomPointsRepo()
-    private val portalsRepo = PortalsRepo()
     private val cellsRepo = S2CellsRepo()
     private val handler = Handler(context.mainLooper)
     private val localPortals = ConcurrentHashMap<String, GameEntity.Portal>()
@@ -275,17 +274,6 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
             0.0
         } else {
             zoomToArea[zoom]
-        }
-
-        for (p in portals) {
-            portalsRepo.add(
-                PortalDto(
-                    p.key,
-                    p.value.data.name,
-                    p.value.data.lat,
-                    p.value.data.lng
-                )
-            )
         }
 
         if (Settings.showPortals) {
