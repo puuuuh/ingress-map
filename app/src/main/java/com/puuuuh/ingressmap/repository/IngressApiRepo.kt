@@ -9,6 +9,8 @@ import com.puuuuh.ingressmap.settings.Settings
 import com.puuuuh.ingressmap.utils.AuthInterceptor
 import okhttp3.*
 import java.io.IOException
+import java.io.PrintWriter
+import java.io.StringWriter
 import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
@@ -238,7 +240,8 @@ class IngressApiRepo {
                         getTilesInfo(seq, next, callback, retry + 1)
                     }
                 } catch (e: Exception) {
-                    Log.e("IngressApiRepo", e.message ?: "")
+                    val stacktrace = StringWriter().also { e.printStackTrace(PrintWriter(it)) }.toString().trim()
+                    Log.e("IngressApiRepo", stacktrace)
                 }
                 callback.onRequestEnd()
             }

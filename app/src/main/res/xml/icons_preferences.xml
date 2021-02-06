@@ -22,6 +22,15 @@
             app:preference_dialog_negative="Cancel"
             app:preference_dialog_positive="Ok"/>
         <com.skydoves.colorpickerpreference.ColorPickerPreference
+            android:key="E_CENTERUNIQUE"
+            android:title="Center unique"
+            app:default_color="#FFFFFFFF"
+            app:preference_attachAlphaSlideBar="true"
+            app:preference_attachBrightnessSlideBar="true"
+            app:preference_colorBox_radius="26dp"
+            app:preference_dialog_negative="Cancel"
+            app:preference_dialog_positive="Ok"/>
+        <com.skydoves.colorpickerpreference.ColorPickerPreference
             android:key="E_VOLATILE"
             android:title="Volatility"
             app:default_color="#FFFFFF00"
@@ -52,6 +61,15 @@
             app:preference_dialog_negative="Cancel"
             app:preference_dialog_positive="Ok"/>
         <com.skydoves.colorpickerpreference.ColorPickerPreference
+            android:key="R_CENTERUNIQUE"
+            android:title="Center unique"
+            app:default_color="#FFFFFFFF"
+            app:preference_attachAlphaSlideBar="true"
+            app:preference_attachBrightnessSlideBar="true"
+            app:preference_colorBox_radius="26dp"
+            app:preference_dialog_negative="Cancel"
+            app:preference_dialog_positive="Ok"/>
+        <com.skydoves.colorpickerpreference.ColorPickerPreference
             android:key="R_VOLATILE"
             android:title="Volatility"
             app:default_color="#FFFFFF00"
@@ -75,6 +93,15 @@
         <com.skydoves.colorpickerpreference.ColorPickerPreference
             android:key="N_CENTER"
             android:title="Center"
+            app:default_color="#00000000"
+            app:preference_attachAlphaSlideBar="true"
+            app:preference_attachBrightnessSlideBar="true"
+            app:preference_colorBox_radius="26dp"
+            app:preference_dialog_negative="Cancel"
+            app:preference_dialog_positive="Ok"/>
+        <com.skydoves.colorpickerpreference.ColorPickerPreference
+            android:key="N_CENTERUNIQUE"
+            android:title="Center unique"
             app:default_color="#00000000"
             app:preference_attachAlphaSlideBar="true"
             app:preference_attachBrightnessSlideBar="true"

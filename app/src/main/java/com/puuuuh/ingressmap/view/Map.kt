@@ -112,6 +112,11 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
                         "-Marked"
                     } else {
                         ""
+                    } +
+                    if (portal.data.unique) {
+                        "-Unique"
+                    } else {
+                        ""
                     }
         } else {
             "N"
@@ -130,12 +135,20 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
         enableMyLocation()
 
         icons = hashMapOf(
-                Pair("E", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "E"), Settings.getColor(ColorType.Center, "E"), Color.TRANSPARENT))),
-                Pair("R", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "R"), Settings.getColor(ColorType.Center, "R"), Color.TRANSPARENT))),
-                Pair("N", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "N"), Settings.getColor(ColorType.Center, "N"), Color.TRANSPARENT))),
-                Pair("E-Marked", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "E"), Settings.getColor(ColorType.Center, "E"), Settings.getColor(ColorType.Volatile, "E")))),
-                Pair("R-Marked", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "R"), Settings.getColor(ColorType.Center, "R"), Settings.getColor(ColorType.Volatile, "R")))),
-                Pair("N-Marked", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "N"), Settings.getColor(ColorType.Center, "N"), Settings.getColor(ColorType.Volatile, "N")))),
+            Pair("E", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "E"), Settings.getColor(ColorType.Center, "E"), Color.TRANSPARENT))),
+            Pair("R", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "R"), Settings.getColor(ColorType.Center, "R"), Color.TRANSPARENT))),
+            Pair("N", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "N"), Settings.getColor(ColorType.Center, "N"), Color.TRANSPARENT))),
+            Pair("E-Marked", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "E"), Settings.getColor(ColorType.Center, "E"), Settings.getColor(ColorType.Volatile, "E")))),
+            Pair("R-Marked", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "R"), Settings.getColor(ColorType.Center, "R"), Settings.getColor(ColorType.Volatile, "R")))),
+            Pair("N-Marked", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "N"), Settings.getColor(ColorType.Center, "N"), Settings.getColor(ColorType.Volatile, "N")))),
+
+            Pair("E-Unique", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "E"), Settings.getColor(ColorType.CenterUnique, "E"), Color.TRANSPARENT))),
+            Pair("R-Unique", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "R"), Settings.getColor(ColorType.CenterUnique, "R"), Color.TRANSPARENT))),
+            Pair("N-Unique", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "N"), Settings.getColor(ColorType.CenterUnique, "N"), Color.TRANSPARENT))),
+
+            Pair("E-Marked-Unique", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "E"), Settings.getColor(ColorType.CenterUnique, "E"), Settings.getColor(ColorType.Volatile, "E")))),
+            Pair("R-Marked-Unique", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "R"), Settings.getColor(ColorType.CenterUnique, "R"), Settings.getColor(ColorType.Volatile, "R")))),
+            Pair("N-Marked-Unique", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "N"), Settings.getColor(ColorType.CenterUnique, "N"), Settings.getColor(ColorType.Volatile, "N")))),
         )
 
         mapViewModel.targetPosition.observe(viewLifecycleOwner, {

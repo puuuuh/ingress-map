@@ -72,6 +72,10 @@ class OsmMap : Fragment(), MapListener, Marker.OnMarkerClickListener {
                         "-Marked"
                     } else {
                         ""
+                    } + if (portal.data.unique) {
+                        "-Unique"
+                    } else {
+                        ""
                     }
         } else {
             "N"
@@ -124,6 +128,19 @@ class OsmMap : Fragment(), MapListener, Marker.OnMarkerClickListener {
                 ColorType.Center, "R"), Settings.getColor(ColorType.Volatile, "R")).toDrawable(resources)),
             Pair("N-Marked", PortalIcons.createIcon(Settings.getColor(ColorType.Main, "N"), Settings.getColor(
                 ColorType.Center, "N"), Settings.getColor(ColorType.Volatile, "N")).toDrawable(resources)),
+
+            Pair("E-Unique", PortalIcons.createIcon(Settings.getColor(ColorType.Main, "E"), Settings.getColor(
+                ColorType.CenterUnique, "E"), Color.TRANSPARENT).toDrawable(resources)),
+            Pair("R-Unique", PortalIcons.createIcon(Settings.getColor(ColorType.Main, "R"), Settings.getColor(
+                ColorType.CenterUnique, "R"), Color.TRANSPARENT).toDrawable(resources)),
+            Pair("N-Unique", PortalIcons.createIcon(Settings.getColor(ColorType.Main, "N"), Settings.getColor(
+                ColorType.CenterUnique, "N"), Color.TRANSPARENT).toDrawable(resources)),
+            Pair("E-Marked-Unique", PortalIcons.createIcon(Settings.getColor(ColorType.Main, "E"), Settings.getColor(
+                ColorType.CenterUnique, "E"), Settings.getColor(ColorType.Volatile, "E")).toDrawable(resources)),
+            Pair("R-Marked-Unique", PortalIcons.createIcon(Settings.getColor(ColorType.Main, "R"), Settings.getColor(
+                ColorType.CenterUnique, "R"), Settings.getColor(ColorType.Volatile, "R")).toDrawable(resources)),
+            Pair("N-Marked-Unique", PortalIcons.createIcon(Settings.getColor(ColorType.Main, "N"), Settings.getColor(
+                ColorType.CenterUnique, "N"), Settings.getColor(ColorType.Volatile, "N")).toDrawable(resources)),
         )
 
         Settings.liveHideTeams.observe(viewLifecycleOwner) {

@@ -8,7 +8,7 @@ class PortalIcons {
     companion object {
         fun createIcon(color: Int, centerColor: Int, markColor: Int): Bitmap {
             val len = (MainApplication.applicationContext().resources.displayMetrics.density * 20);
-            val elSize = (len / 6)
+            var elSize = (len / 6)
             val bmp = createBitmap(len.toInt(),len.toInt());
             val canvas = Canvas(bmp)
 
@@ -33,6 +33,7 @@ class PortalIcons {
                 canvas.drawArc(oval, i * 120f, 60f, false, markPaint)
             }
 
+            elSize += 2f;
             canvas.drawOval((len - elSize) / 2, (len - elSize) / 2, (len + elSize) / 2, (len + elSize) / 2, centerPaint)
             return bmp
         }
