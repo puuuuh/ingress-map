@@ -57,6 +57,7 @@ class PortalDeserializer : JsonDeserializer<PortalData> {
         }
         val name = entityData[8].asString
         val specials = entityData[9].asJsonArray.map { it.asString }.toHashSet()
+        var unique = true
         if (entityData.size() >= 17) {
             var mods = emptyList<Mod>()
             var resonators = emptyList<Resonator>()
@@ -82,15 +83,15 @@ class PortalDeserializer : JsonDeserializer<PortalData> {
 
             val energy = resonators.sumBy { it.energy }
 
-            var unique = false
+
             if (entityData.size() >= 18) {
-                unique = entityData[18].asString == "1"
+                unique = entityData[18].asString == "0"
             }
 
             return PortalData(lat, lng, lvl, energy, pic, name, team, specials, mods, resonators, owner, unique)
         }
 
-        return PortalData(lat, lng, lvl, 0, pic, name, team, specials, false)
+        return PortalData(lat, lng, lvl, 0, pic, name, team, specials, unique)
     }
 
 }
