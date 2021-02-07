@@ -85,7 +85,7 @@ class PortalDeserializer : JsonDeserializer<PortalData> {
 
 
             if (entityData.size() >= 18) {
-                unique = entityData[18].asString == "0"
+                unique = entityData[18].asInt.and(2) == 0
             }
 
             return PortalData(lat, lng, lvl, energy, pic, name, team, specials, mods, resonators, owner, unique)
