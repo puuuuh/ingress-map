@@ -84,7 +84,7 @@ class PortalDeserializer : JsonDeserializer<PortalData> {
             val energy = resonators.sumBy { it.energy }
 
 
-            if (entityData.size() >= 18) {
+            if (entityData.size() > 18) {
                 unique = entityData[18].asInt.and(2) == 0
             }
 

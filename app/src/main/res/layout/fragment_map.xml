@@ -48,6 +48,19 @@
         fab:fab_labelsPosition="left">
 
         <com.getbase.floatingactionbutton.FloatingActionButton
+            android:id="@+id/editOverlayFab"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            fab:fab_icon="@drawable/ic_baseline_settings_overscan_24"/>
+
+        <com.getbase.floatingactionbutton.FloatingActionButton
+
+            android:id="@+id/openOverlayFab"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            fab:fab_icon="@drawable/ic_baseline_image_24" />
+
+        <com.getbase.floatingactionbutton.FloatingActionButton
 
             android:id="@+id/openFab"
             android:layout_width="wrap_content"

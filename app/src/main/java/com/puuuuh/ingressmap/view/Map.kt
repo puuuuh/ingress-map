@@ -1,13 +1,13 @@
 package com.puuuuh.ingressmap.view
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.PorterDuff
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.fragment.app.Fragment
@@ -30,6 +30,7 @@ import com.puuuuh.ingressmap.viewmodel.MapViewModel
 import com.puuuuh.ingressmap.viewmodel.ViewmodelFactory
 import kotlinx.android.synthetic.main.fragment_map.*
 
+
 class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
     GoogleMap.OnMarkerClickListener, GoogleMap.OnPolylineClickListener {
     private val mapViewModel: MapViewModel by activityViewModels { ViewmodelFactory(this.requireContext()) }
@@ -42,6 +43,8 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
     private var customFields = mutableMapOf<String, Polygon>()
     private var selectedPoint: Marker? = null
     private var hideTeams: Boolean = true
+    private var overlay: GroundOverlay? = null
+    private var overlayEdit = false
     private var saveLinksIntent =
         registerForActivityResult(ActivityResultContracts.CreateDocument()) {
             if (it != null)
@@ -53,16 +56,21 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
             mapViewModel.loadLinks(it)
     }
 
+    private var loadOverlayIntent = registerForActivityResult(ActivityResultContracts.GetContent()) {
+        mapViewModel.loadOverlay(it)
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
     override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
+            inflater: LayoutInflater,
+            container: ViewGroup?,
+            savedInstanceState: Bundle?
     ): View? {
         mapViewModel.moveCamera(Settings.lastPosition)
         if (savedInstanceState != null)
             return null
-
-        return inflater.inflate(R.layout.fragment_map, container, false)
+        val view = inflater.inflate(R.layout.fragment_map, container, false)
+        return view
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -79,6 +87,20 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
         val map = childFragmentManager.findFragmentById(R.id.map)
         (map as SupportMapFragment).getMapAsync(this)
 
+        view.findViewById<FloatingActionButton>(R.id.openOverlayFab).setOnClickListener {
+            loadOverlayIntent.launch("*/*")
+        }
+
+        view.findViewById<FloatingActionButton>(R.id.editOverlayFab).setOnClickListener {
+            val it = it as FloatingActionButton
+            overlayEdit = !overlayEdit
+            if (overlayEdit) {
+                it.colorNormal = requireContext().getColor(R.color.quantum_vanillablueA700)
+            } else {
+                it.colorNormal = requireContext().getColor(android.R.color.holo_blue_dark)
+            }
+        }
+
         view.findViewById<FloatingActionButton>(R.id.saveFab).setOnClickListener {
             saveLinksIntent.launch("links.txt")
         }
@@ -86,22 +108,22 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
             loadLinksIntent.launch("*/*")
         }
 
-        view.findViewById<FloatingActionButton>(R.id.drawFab).backgroundTintMode =
-            if (Settings.drawMode) {
-                PorterDuff.Mode.XOR
-            } else {
-                null
-            }
+        view.findViewById<FloatingActionButton>(R.id.drawFab).colorNormal =
+                if (Settings.drawMode) {
+                    requireContext().getColor(R.color.quantum_vanillablueA700)
+                } else {
+                    requireContext().getColor(android.R.color.holo_blue_dark)
+                }
 
         view.findViewById<FloatingActionButton>(R.id.drawFab).setOnClickListener {
             Settings.drawMode = !Settings.drawMode
 
-            view.findViewById<FloatingActionButton>(R.id.drawFab).backgroundTintMode =
-                if (Settings.drawMode) {
-                    PorterDuff.Mode.XOR
-                } else {
-                    null
-                }
+            view.findViewById<FloatingActionButton>(R.id.drawFab).colorNormal =
+                    if (Settings.drawMode) {
+                        requireContext().getColor(R.color.quantum_vanillablueA700)
+                    } else {
+                        requireContext().getColor(android.R.color.holo_blue_dark)
+                    }
         }
     }
 
@@ -134,27 +156,78 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
         mMap.mapType = GoogleMap.MAP_TYPE_HYBRID
         enableMyLocation()
 
+            var z = mMap.cameraPosition.zoom
+            var pos = mMap.cameraPosition.target
+
+            mMap.setOnCameraMoveStartedListener {
+                z = mMap.cameraPosition.zoom
+                pos = mMap.cameraPosition.target
+            }
+
+            mMap.setOnCameraMoveListener {
+                if (!overlayEdit) {
+                    return@setOnCameraMoveListener
+                }
+                val o = overlay
+                if (o != null) {
+                    val newPos = LatLng(o.position.latitude - (pos.latitude - mMap.cameraPosition.target.latitude), o.position.longitude - (pos.longitude - mMap.cameraPosition.target.longitude))
+                    pos = mMap.cameraPosition.target
+
+                    val t = (mMap.cameraPosition.zoom - z) * 1100
+
+                    if (o.width + t > 0) {
+                        mapViewModel.moveOverlay(newPos, o.width + t)
+                    }
+                }
+                z = mMap.cameraPosition.zoom
+            }
+
         icons = hashMapOf(
-            Pair("E", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "E"), Settings.getColor(ColorType.Center, "E"), Color.TRANSPARENT))),
-            Pair("R", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "R"), Settings.getColor(ColorType.Center, "R"), Color.TRANSPARENT))),
-            Pair("N", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "N"), Settings.getColor(ColorType.Center, "N"), Color.TRANSPARENT))),
-            Pair("E-Marked", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "E"), Settings.getColor(ColorType.Center, "E"), Settings.getColor(ColorType.Volatile, "E")))),
-            Pair("R-Marked", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "R"), Settings.getColor(ColorType.Center, "R"), Settings.getColor(ColorType.Volatile, "R")))),
-            Pair("N-Marked", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "N"), Settings.getColor(ColorType.Center, "N"), Settings.getColor(ColorType.Volatile, "N")))),
+                Pair("E", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "E"), Settings.getColor(ColorType.Center, "E"), Color.TRANSPARENT))),
+                Pair("R", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "R"), Settings.getColor(ColorType.Center, "R"), Color.TRANSPARENT))),
+                Pair("N", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "N"), Settings.getColor(ColorType.Center, "N"), Color.TRANSPARENT))),
+                Pair("E-Marked", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "E"), Settings.getColor(ColorType.Center, "E"), Settings.getColor(ColorType.Volatile, "E")))),
+                Pair("R-Marked", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "R"), Settings.getColor(ColorType.Center, "R"), Settings.getColor(ColorType.Volatile, "R")))),
+                Pair("N-Marked", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "N"), Settings.getColor(ColorType.Center, "N"), Settings.getColor(ColorType.Volatile, "N")))),
 
-            Pair("E-Unique", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "E"), Settings.getColor(ColorType.CenterUnique, "E"), Color.TRANSPARENT))),
-            Pair("R-Unique", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "R"), Settings.getColor(ColorType.CenterUnique, "R"), Color.TRANSPARENT))),
-            Pair("N-Unique", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "N"), Settings.getColor(ColorType.CenterUnique, "N"), Color.TRANSPARENT))),
+                Pair("E-Unique", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "E"), Settings.getColor(ColorType.CenterUnique, "E"), Color.TRANSPARENT))),
+                Pair("R-Unique", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "R"), Settings.getColor(ColorType.CenterUnique, "R"), Color.TRANSPARENT))),
+                Pair("N-Unique", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "N"), Settings.getColor(ColorType.CenterUnique, "N"), Color.TRANSPARENT))),
 
-            Pair("E-Marked-Unique", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "E"), Settings.getColor(ColorType.CenterUnique, "E"), Settings.getColor(ColorType.Volatile, "E")))),
-            Pair("R-Marked-Unique", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "R"), Settings.getColor(ColorType.CenterUnique, "R"), Settings.getColor(ColorType.Volatile, "R")))),
-            Pair("N-Marked-Unique", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "N"), Settings.getColor(ColorType.CenterUnique, "N"), Settings.getColor(ColorType.Volatile, "N")))),
+                Pair("E-Marked-Unique", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "E"), Settings.getColor(ColorType.CenterUnique, "E"), Settings.getColor(ColorType.Volatile, "E")))),
+                Pair("R-Marked-Unique", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "R"), Settings.getColor(ColorType.CenterUnique, "R"), Settings.getColor(ColorType.Volatile, "R")))),
+                Pair("N-Marked-Unique", BitmapDescriptorFactory.fromBitmap(PortalIcons.createIcon(Settings.getColor(ColorType.Main, "N"), Settings.getColor(ColorType.CenterUnique, "N"), Settings.getColor(ColorType.Volatile, "N")))),
         )
 
         mapViewModel.targetPosition.observe(viewLifecycleOwner, {
             if (it.lat != 0.0 && it.lng != 0.0) {
                 mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(it.lat, it.lng), it.zoom))
                 mapViewModel.moveCamera(FullPosition(0.0, 0.0, 0.0f))
+            }
+        })
+
+        mapViewModel.overlay.observe(viewLifecycleOwner, {
+            overlay?.remove()
+
+            if (it != null) {
+                var pos = mapViewModel.overlayPos.value
+                if (pos == null) {
+                    pos = Triple(mMap.cameraPosition.target, it.width.toFloat(), it.height.toFloat())
+                }
+                val overlayOpt = GroundOverlayOptions()
+                        .image(BitmapDescriptorFactory.fromBitmap(it))
+                        .position(pos!!.first, pos!!.second, pos!!.third)
+                        .transparency(0.35f)
+
+                overlay = mMap.addGroundOverlay(overlayOpt)
+            }
+        })
+
+        mapViewModel.overlayPos.observe(viewLifecycleOwner, {
+            val o = overlay
+            if (o != null && it != null) {
+                o.setDimensions(it.second, it.third)
+                o.position = it.first
             }
         })
 
@@ -168,23 +241,23 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
                 val pos = LatLng(i.value.data.lat, i.value.data.lng)
                 if (old == null) {
                     val m = MarkerOptions()
-                        .position(pos)
-                        .title(i.value.data.name)
-                        .icon(iconRes)
-                        .zIndex(2f)
-                        .anchor(0.5f, 0.5f)
+                            .position(pos)
+                            .title(i.value.data.name)
+                            .icon(iconRes)
+                            .zIndex(2f)
+                            .anchor(0.5f, 0.5f)
                     newPortals[i.key] = Pair(
-                        mMap.addMarker(m),
-                        if (mMap.cameraPosition.zoom > 18) {
-                            val oreol = CircleOptions()
-                                .center(pos)
-                                .radius(20.0)
-                                .fillColor(0x77303030)
-                                .strokeWidth(0.0F)
-                            mMap.addCircle(oreol)
-                        } else {
-                            null
-                        }
+                            mMap.addMarker(m),
+                            if (mMap.cameraPosition.zoom > 18) {
+                                val oreol = CircleOptions()
+                                        .center(pos)
+                                        .radius(20.0)
+                                        .fillColor(0x77303030)
+                                        .strokeWidth(0.0F)
+                                mMap.addCircle(oreol)
+                            } else {
+                                null
+                            }
                     )
 
                 } else {
@@ -197,10 +270,10 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
                     }
                     if (mMap.cameraPosition.zoom > 18 && old.second == null) {
                         val oreol = CircleOptions()
-                            .center(pos)
-                            .radius(20.0)
-                            .fillColor(0x77303030)
-                            .strokeWidth(0.0F)
+                                .center(pos)
+                                .radius(20.0)
+                                .fillColor(0x77303030)
+                                .strokeWidth(0.0F)
                         newPortals[i.key] = Pair(old.first, mMap.addCircle(oreol))
                     } else if (mMap.cameraPosition.zoom <= 18 && old.second != null) {
                         old.second!!.remove()
@@ -229,13 +302,13 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
 
                 if (old == null) {
                     val m = PolylineOptions()
-                        .add(
-                            LatLng(i.value.data.points.first.lat, i.value.data.points.first.lng),
-                            LatLng(i.value.data.points.second.lat, i.value.data.points.second.lng)
-                        )
-                        .width(2f)
-                        .zIndex(3f)
-                        .color(color)
+                            .add(
+                                    LatLng(i.value.data.points.first.lat, i.value.data.points.first.lng),
+                                    LatLng(i.value.data.points.second.lat, i.value.data.points.second.lng)
+                            )
+                            .width(2f)
+                            .zIndex(3f)
+                            .color(color)
 
                     newLinks[i.key] = mMap.addPolyline(m)
                 } else {
@@ -243,16 +316,16 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
                         old.color = color
                     }
                     if (old.points[0].latitude != i.value.data.points.first.lat ||
-                        old.points[0].longitude != i.value.data.points.first.lng
+                            old.points[0].longitude != i.value.data.points.first.lng
                     ) {
                         old.points[0] =
-                            LatLng(i.value.data.points.first.lat, i.value.data.points.first.lng)
+                                LatLng(i.value.data.points.first.lat, i.value.data.points.first.lng)
                     }
                     if (old.points[1].latitude != i.value.data.points.second.lat ||
-                        old.points[1].longitude != i.value.data.points.second.lng
+                            old.points[1].longitude != i.value.data.points.second.lng
                     ) {
                         old.points[1] =
-                            LatLng(i.value.data.points.second.lat, i.value.data.points.second.lng)
+                                LatLng(i.value.data.points.second.lat, i.value.data.points.second.lng)
                     }
                     newLinks[i.key] = old
                 }
@@ -279,15 +352,15 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
                         Color.argb(255, 0, 140, 255)
                     }
                     val m = PolygonOptions()
-                        .add(
-                            i.value.data.points.first.toLatLng(),
-                            i.value.data.points.second.toLatLng(),
-                            i.value.data.points.third.toLatLng(),
-                        )
-                        .fillColor(color)
-                        .strokeWidth(4f)
-                        .zIndex(2f)
-                        .strokeColor(strokeColor)
+                            .add(
+                                    i.value.data.points.first.toLatLng(),
+                                    i.value.data.points.second.toLatLng(),
+                                    i.value.data.points.third.toLatLng(),
+                            )
+                            .fillColor(color)
+                            .strokeWidth(4f)
+                            .zIndex(2f)
+                            .strokeColor(strokeColor)
 
                     newFields[i.key] = mMap.addPolygon(m)
                 } else {
@@ -299,6 +372,7 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
             }
             fields = newFields
         })
+
         mapViewModel.cellLines.observe(viewLifecycleOwner, { data ->
             val newLines = hashMapOf<S2CellId, Polyline>()
             data.map {
@@ -307,15 +381,15 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
                     when (it.key.level()) {
                         14 -> {
                             it.value
-                                .color(Color.rgb(239, 70, 15))
-                                .width(8f)
-                                .zIndex(1f)
+                                    .color(Color.rgb(239, 70, 15))
+                                    .width(8f)
+                                    .zIndex(1f)
                         }
                         17 -> {
                             it.value
-                                .color(Color.rgb(8, 152, 152))
-                                .width(4f)
-                                .zIndex(0f)
+                                    .color(Color.rgb(8, 152, 152))
+                                    .width(4f)
+                                    .zIndex(0f)
                         }
                     }
                     line = mMap.addPolyline(it.value)
@@ -345,10 +419,10 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
 
                 if (old == null) {
                     val m = i.value
-                        .width(4f)
-                        .zIndex(4f)
-                        .color(color)
-                        .clickable(true)
+                            .width(4f)
+                            .zIndex(4f)
+                            .color(color)
+                            .clickable(true)
                     val line = mMap.addPolyline(m)
                     line.tag = i.key
                     newLinks[i.key] = line
@@ -366,8 +440,8 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
             selectedPoint?.remove()
             if (data != null) {
                 selectedPoint = mMap.addMarker(
-                    MarkerOptions()
-                        .position(data)
+                        MarkerOptions()
+                                .position(data)
                 )
             }
         })
@@ -378,11 +452,11 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
                 val old = customFields.remove(i.key)
                 if (old == null) {
                     val t = PolygonOptions()
-                        .add(i.value[0])
-                        .add(i.value[1])
-                        .add(i.value[2])
-                        .strokeWidth(4f)
-                        .fillColor(Color.argb(100, 200, 0, 0))
+                            .add(i.value[0])
+                            .add(i.value[1])
+                            .add(i.value[2])
+                            .strokeWidth(4f)
+                            .fillColor(Color.argb(100, 200, 0, 0))
 
                     new[i.key] = mMap.addPolygon(t)
                 } else {
@@ -424,12 +498,12 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
 
     private fun enableMyLocation() {
         if (ActivityCompat.checkSelfPermission(
-                requireContext(),
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                requireContext(),
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
+                        requireContext(),
+                        Manifest.permission.ACCESS_FINE_LOCATION
+                ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                        requireContext(),
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                ) != PackageManager.PERMISSION_GRANTED
         ) {
             return
         }
@@ -440,9 +514,9 @@ class Map : Fragment(), OnMapReadyCallback, GoogleMap.OnCameraIdleListener,
 
     override fun onCameraIdle() {
         mapViewModel.updatePosition(
-            mMap.cameraPosition.target,
-            mMap.projection.visibleRegion.latLngBounds,
-            mMap.cameraPosition.zoom.toInt()
+                mMap.cameraPosition.target,
+                mMap.projection.visibleRegion.latLngBounds,
+                mMap.cameraPosition.zoom.toInt()
         )
     }
 

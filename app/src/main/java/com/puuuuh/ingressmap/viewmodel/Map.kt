@@ -1,6 +1,8 @@
 package com.puuuuh.ingressmap.viewmodel
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Handler
 import androidx.lifecycle.LiveData
@@ -96,6 +98,15 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
 
     private val _playerInfo = MutableLiveData<PlayerInfo>()
     val playerInfo: LiveData<PlayerInfo> = _playerInfo
+
+    private val _overlay = MutableLiveData<Bitmap?>()
+    val overlay: LiveData<Bitmap?> = _overlay
+
+    private val _overlayPos = MutableLiveData<Triple<LatLng, Float, Float>?>()
+    val overlayPos: LiveData<Triple<LatLng, Float, Float>?> = _overlayPos
+
+    private val _overlayRatio = MutableLiveData<Float>()
+    val overlayRatio: LiveData<Float> = _overlayRatio
 
     private val zoomToLevel = arrayOf(8, 8, 8, 8, 7, 7, 6, 6, 5, 4, 4, 3, 2, 1, 1, 1, 1, 1, 1, 1)
 
@@ -389,8 +400,8 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
 
         if (input != null) {
             val data = MainApplication.gson.fromJson(
-                input.readBytes().toString(Charset.defaultCharset()),
-                LinkFile::class.java
+                    input.readBytes().toString(Charset.defaultCharset()),
+                    LinkFile::class.java
             )
             data.forEach {
                 var prev: LatLng? = null
@@ -410,5 +421,31 @@ class MapViewModel(val context: Context) : ViewModel(), OnDataReadyCallback, OnC
 
         }
         input?.close()
+    }
+
+    fun loadOverlay(path: Uri?) {
+        if (path != null) {
+            val input = context.contentResolver.openInputStream(path)
+
+            if (input != null) {
+                val data = context.contentResolver.openInputStream(path)
+                val bmp = BitmapFactory.decodeStream(data)
+                _overlayRatio.value = bmp.height.toFloat() / bmp.width
+                _overlayPos.value = null
+                _overlay.value = bmp
+            } else {
+                _overlay.value = null
+            }
+            input?.close()
+        } else {
+            _overlay.value = null
+        }
+
+    }
+
+    fun moveOverlay(pos: LatLng, h: Float) {
+        val r = overlayRatio.value
+        if (r != null)
+            _overlayPos.value = Triple(pos, h, h * r)
     }
 }
