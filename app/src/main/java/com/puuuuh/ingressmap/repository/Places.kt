@@ -49,7 +49,7 @@ class PlacesRepository {
     val data: LiveData<List<Feature>> = _data
 
     fun get(q: String) {
-        val url = HttpUrl.Builder().host("photon.komoot.de")
+        val url = HttpUrl.Builder().host("photon.komoot.io")
             .encodedPath("/api/")
             .addQueryParameter("q", q)
             .addQueryParameter("lang", "en")
