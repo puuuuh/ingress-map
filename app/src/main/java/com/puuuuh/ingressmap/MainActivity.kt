@@ -6,6 +6,7 @@ import android.content.res.ColorStateList
 import android.database.MatrixCursor
 import android.graphics.Color
 import android.net.Uri
+import android.net.UrlQuerySanitizer
 import android.os.Bundle
 import android.util.Log
 import android.view.Menu
@@ -59,20 +60,30 @@ class MainActivity : AppCompatActivity() {
         if (intent.action == Intent.ACTION_VIEW && intent.dataString != null) {
             try {
                 val url = Uri.parse(intent.dataString)
-                val location = if (url.scheme == "geo") {
-                    url.schemeSpecificPart.substringBefore(';')
+                val data = if (url.scheme == "geo") {
+                    val sanitizer = UrlQuerySanitizer()
+                    val query = url.schemeSpecificPart?.substringAfter('?', "")
+                    val zoom = if (query != null && query.isNotEmpty()) {
+                        sanitizer.parseQuery(query)
+                        sanitizer.getValue("z")?.toFloatOrNull()
+                    } else {
+                        null
+                    }
+
+                    Pair(zoom, url.schemeSpecificPart?.substringBefore(';')?.substringBefore('?'))
                 } else {
-                    url.getQueryParameter("ll")
+                    val zoom = url.getQueryParameter("z")?.toFloatOrNull()
+                    Pair(zoom, url.getQueryParameter("ll"))
                 }
-                val zoom = url.getQueryParameter("z")
-                if (location != null) {
-                    val parts = location.split(",")
+
+                if (data.second != null) {
+                    val parts = data.second!!.split(",")
                     if (parts.count() == 2) {
                         try {
                             Settings.lastPosition = FullPosition(
                                 parts[0].toDouble(),
                                 parts[1].toDouble(),
-                                (zoom?.toFloat() ?: 17.0f)
+                                (data.first ?: 17.0f)
                             )
                         } catch (e: NumberFormatException) {
                         }
