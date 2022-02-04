@@ -7,6 +7,7 @@ import android.database.MatrixCursor
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -56,21 +57,29 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         if (intent.action == Intent.ACTION_VIEW && intent.dataString != null) {
-            val url = Uri.parse(intent.dataString)
-            val location = url.getQueryParameter("ll")
-            val zoom = url.getQueryParameter("z")
-            if (location != null) {
-                val parts = location.split(",")
-                if (parts.count() == 2) {
-                    try {
-                        Settings.lastPosition = FullPosition(
+            try {
+                val url = Uri.parse(intent.dataString)
+                val location = if (url.scheme == "geo") {
+                    url.schemeSpecificPart.substringBefore(';')
+                } else {
+                    url.getQueryParameter("ll")
+                }
+                val zoom = url.getQueryParameter("z")
+                if (location != null) {
+                    val parts = location.split(",")
+                    if (parts.count() == 2) {
+                        try {
+                            Settings.lastPosition = FullPosition(
                                 parts[0].toDouble(),
                                 parts[1].toDouble(),
                                 (zoom?.toFloat() ?: 17.0f)
-                        )
-                    } catch (e: NumberFormatException) {
+                            )
+                        } catch (e: NumberFormatException) {
+                        }
                     }
                 }
+            } catch (e: Exception) {
+                e.message?.let { Log.e("ingress-app", it) }
             }
         }
 

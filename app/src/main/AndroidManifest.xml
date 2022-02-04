@@ -54,6 +54,8 @@
                     android:host="intel.ingress.com"
                     android:pathPrefix="/"
                     android:scheme="https" />
+
+                <data android:scheme="geo" />
             </intent-filter>
 
             <meta-data
