@@ -39,6 +39,16 @@
                 <category android:name="android.intent.category.DEFAULT" />
 
                 <data
+                    android:scheme="geo" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.BROWSABLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data
                     android:host="intel.ingress.com"
                     android:pathPrefix="/intel"
                     android:scheme="http" />
@@ -55,7 +65,6 @@
                     android:pathPrefix="/"
                     android:scheme="https" />
 
-                <data android:scheme="geo" />
             </intent-filter>
 
             <meta-data
